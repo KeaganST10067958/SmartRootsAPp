@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smart Roots</string>
+    <string name="tagline">Hidroponika eenvoudig gemaak</string>
+    <string name="action_continue">Gaan voort</string>
+    <string name="language">Taal</string>
+    <string name="theme">Tema</string>
+    <string name="dark">Donker</string>
+    <string name="light">Lig</string>
+    <string name="dashboard">Paneelbord</string>
+    <string name="humidity">Humiditeit</string>
+    <string name="tip_humidity">Lugvog</string>
+    <string name="temperature">Temperatuur</string>
+    <string name="tip_temperature">Kweekkamer</string>
+    <string name="soil_ph">Grond pH</string>
+    <string name="tip_ph">Suur / Basis</string>
+    <string name="ec">Elektriese Geleidbaarheid</string>
+    <string name="tip_ec">Voedingsterkte</string>
+    <string name="water_level">Watervlak</string>
+    <string name="tip_water">Reservoir</string>
+    <string name="notes">Notas</string>
+    <string name="tip_notes">Stoor waarnemings</string>
+    <string name="camera">Kamera</string>
+    <string name="tip_camera">Neem foto’s</string>
+</resources>

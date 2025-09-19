@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App -->
+    <string name="app_name">SmartRoots</string>
+    <string name="tagline">Hydroponics made simple</string>
+    <string name="dashboard">Dashboard</string>
+
+    <!-- Welcome -->
+    <string name="theme">Theme</string>
+    <string name="language">Language</string>
+    <string name="light">Light</string>
+    <string name="dark">Dark</string>
+    <string name="action_continue">Continue</string>
+    <string name="vegetables">Vegetables</string>
+    <string name="fodder">Fodder</string>
+
+    <!-- Sensors & tiles -->
+    <string name="humidity">Humidity</string>
+    <string name="tip_humidity">Target 60–75% RH for healthy growth.</string>
+    <string name="temperature">Temperature</string>
+    <string name="tip_temperature">Ideal range 20–28°C (veg) or 18–24°C (fodder).</string>
+    <string name="soil_ph">Soil pH</string>
+    <string name="tip_ph">Keep between 5.8 and 6.5.</string>
+    <string name="ec">Electrical Conductivity</string>
+    <string name="tip_ec">Aim for 0.4–1.5 mS/cm (fodder) or crop-specific.</string>
+    <string name="water_level">Water</string>
+    <string name="tip_water">Reservoir level (aim for 40–100%).</string>
+    <string name="notes">Notes</string>
+    <string name="tip_notes">Write reminders or observations.</string>
+    <string name="camera">Camera</string>
+    <string name="tip_camera">Add a photo from your phone.</string>
+
+    <!-- Detail headers / controls -->
+    <string name="sensor_enabled">Sensor enabled</string>
+    <string name="simple_readout">Live reading (simulated)</string>
+    <string name="save">Save</string>
+
+    <!-- Fodder extras -->
+    <string name="mold_watch">Mold Watch</string>
+    <string name="tip_mold">Shows mould risk from temperature, humidity, irrigation timing and airflow.</string>
+    <string name="fan">Fan</string>
+    <string name="tip_fan">Keep air moving to reduce mould risk.</string>
+    <string name="fan_on">Fan On</string>
+    <string name="fan_off">Fan Off</string>
+    <string name="status_on">On</string>
+    <string name="status_off">Off</string>
+    <string name="irrigation">Irrigation</string>
+    <string name="tip_irrigation">Configure interval and duration. "Irrigate now" runs the pump (simulated).</string>
+    <string name="interval_min">Interval (min)</string>
+    <string name="duration_sec">Duration (sec)</string>
+    <string name="last_irrigation_mins">Last irrigation: %1$d min ago</string>
+    <string name="irrigate_now">Irrigate now</string>
+    <string name="pause">Pause</string>
+    <string name="resume">Resume</string>
+</resources>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Smart Roots</string>
+    <string name="tagline">Ihydroponics elula</string>
+    <string name="action_continue">Qhubeka</string>
+    <string name="language">Ulimi</string>
+    <string name="theme">Indikimba</string>
+    <string name="dark">Mnyama</string>
+    <string name="light">Mhlophe</string>
+    <string name="dashboard">Ideshibhodi</string>
+    <string name="humidity">Umswakama</string>
+    <string name="tip_humidity">Umswakama womoya</string>
+    <string name="temperature">Izinga lokushisa</string>
+    <string name="tip_temperature">Igumbi lokukhulisa</string>
+    <string name="soil_ph">pH yenhlabathi</string>
+    <string name="tip_ph">Ukwaba / Ukubaba</string>
+    <string name="ec">Ukumelana kukagesi</string>
+    <string name="tip_ec">Amandla ezakhamzimba</string>
+    <string name="water_level">Izinga lamanzi</string>
+    <string name="tip_water">Ithangi</string>
+    <string name="notes">Amanothi</string>
+    <string name="tip_notes">Gcina okubonayo</string>
+    <string name="camera">Ikhamera</string>
+    <string name="tip_camera">Thatha izithombe</string>
+</resources>

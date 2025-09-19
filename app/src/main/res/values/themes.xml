@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Your normal app theme -->
+    <style name="Theme.SmartRoots" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- keep your color/typography/etc items here if you had them -->
+    </style>
+
+    <!-- Android 12+ (API 31) splash theme -->
+    <style name="Theme.SmartRoots.Splash" parent="Theme.SplashScreen">
+        <!-- ✅ Point to your existing PNG -->
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_logo</item>
+        <item name="windowSplashScreenBackground">@android:color/white</item>
+        <!-- After splash, switch to your real theme -->
+        <item name="postSplashScreenTheme">@style/Theme.SmartRoots</item>
+    </style>
+
+</resources>
