@@ -5,7 +5,7 @@
     <string name="tagline">Hydroponics made simple</string>
     <string name="dashboard">Dashboard</string>
 
-    <!-- Welcome -->
+    <!-- Welcome / settings -->
     <string name="theme">Theme</string>
     <string name="language">Language</string>
     <string name="light">Light</string>
@@ -14,23 +14,23 @@
     <string name="vegetables">Vegetables</string>
     <string name="fodder">Fodder</string>
 
-    <!-- Sensors & tiles -->
+    <!-- Common tiles (Home) -->
     <string name="humidity">Humidity</string>
     <string name="tip_humidity">Target 60–75% RH for healthy growth.</string>
     <string name="temperature">Temperature</string>
     <string name="tip_temperature">Ideal range 20–28°C (veg) or 18–24°C (fodder).</string>
     <string name="soil_ph">Soil pH</string>
-    <string name="tip_ph">Keep between 5.8 and 6.5.</string>
+    <string name="tip_ph">Maintain pH 5.8–6.5 for nutrient availability.</string>
     <string name="ec">Electrical Conductivity</string>
-    <string name="tip_ec">Aim for 0.4–1.5 mS/cm (fodder) or crop-specific.</string>
+    <string name="tip_ec">Aim 0.8–2.0 mS/cm (crop &amp; stage dependent).</string>
     <string name="water_level">Water</string>
     <string name="tip_water">Reservoir level (aim for 40–100%).</string>
     <string name="notes">Notes</string>
-    <string name="tip_notes">Write reminders or observations.</string>
+    <string name="tip_notes">Write reminders or observations; attach images.</string>
     <string name="camera">Camera</string>
-    <string name="tip_camera">Add a photo from your phone.</string>
+    <string name="tip_camera">Capture a photo or open the live feed.</string>
 
-    <!-- Detail headers / controls -->
+    <!-- Detail headers / controls (legacy but safe to keep) -->
     <string name="sensor_enabled">Sensor enabled</string>
     <string name="simple_readout">Live reading (simulated)</string>
     <string name="save">Save</string>
@@ -44,12 +44,28 @@
     <string name="fan_off">Fan Off</string>
     <string name="status_on">On</string>
     <string name="status_off">Off</string>
-    <string name="irrigation">Irrigation</string>
-    <string name="tip_irrigation">Configure interval and duration. "Irrigate now" runs the pump (simulated).</string>
+
+    <!-- RENAMED LABEL: keep key 'irrigation' for routing; label shows 'Pump' -->
+    <string name="irrigation">Pump</string>
+    <string name="tip_irrigation">Pump schedule info and manual toggle.</string>
+
+    <!-- (Former schedule keys kept for compatibility; not shown in new UI) -->
     <string name="interval_min">Interval (min)</string>
     <string name="duration_sec">Duration (sec)</string>
     <string name="last_irrigation_mins">Last irrigation: %1$d min ago</string>
     <string name="irrigate_now">Irrigate now</string>
     <string name="pause">Pause</string>
     <string name="resume">Resume</string>
+
+    <!-- New features -->
+    <string name="harvest">Harvest</string>
+    <string name="tip_harvest">Guides for timing and methods by crop.</string>
+    <string name="crop_planner">Crop Planner</string>
+    <string name="tip_crop_planner">Pick crops, see compatibility and target parameters.</string>
+
+    <!-- Optional extra copy (used in tips; safe to keep if you need in code) -->
+    <plurals name="hours_plural">
+        <item quantity="one">%d hour</item>
+        <item quantity="other">%d hours</item>
+    </plurals>
 </resources>

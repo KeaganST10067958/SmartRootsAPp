@@ -1,12 +1,22 @@
 package com.keagan.smartroots.screens
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -21,7 +31,7 @@ import com.keagan.smartroots.model.Metric
 @Composable
 fun HomeScreen(
     mode: String,                    // "veg" | "fodder"
-    app: com.keagan.smartroots.model.AppState,   // ✅ important
+    app: AppState,
     onBack: () -> Unit,
     onOpenMetric: (String) -> Unit
 ) {
@@ -38,15 +48,19 @@ fun HomeScreen(
         Metric("camera", R.string.camera, R.string.tip_camera, "", 0f, 0f, null, Icons.Rounded.CameraAlt),
     )
 
-    val metrics = if (isVeg) {
-        common
-    } else {
-        listOf(
-            Metric("mold", R.string.mold_watch, R.string.tip_mold, "", 0f, 0f, null, Icons.Rounded.Warning),
-            Metric("fan", R.string.fan, R.string.tip_fan, "", 0f, 0f, null, Icons.Rounded.Air),
-            Metric("irrigation", R.string.irrigation, R.string.tip_irrigation, "", 0f, 0f, null, Icons.Rounded.WaterDrop),
-        ) + common
-    }
+    val fodderExtras = listOf(
+        Metric("mold", R.string.mold_watch, R.string.tip_mold, "", 0f, 0f, null, Icons.Rounded.Warning),
+        Metric("fan", R.string.fan, R.string.tip_fan, "", 0f, 0f, null, Icons.Rounded.Air),
+        // keep the key "irrigation" for navigation, but title shows "Pump"
+        Metric("irrigation", R.string.irrigation, R.string.tip_irrigation, "", 0f, 0f, null, Icons.Rounded.WaterDrop),
+    )
+
+    val extra = listOf(
+        Metric("harvest", R.string.harvest, R.string.tip_harvest, "", 0f, 0f, null, Icons.Rounded.Spa),
+        Metric("planner", R.string.crop_planner, R.string.tip_crop_planner, "", 0f, 0f, null, Icons.Rounded.List)
+    )
+
+    val metrics = (if (isVeg) common else fodderExtras + common) + extra
 
     Scaffold(
         topBar = {
@@ -69,8 +83,15 @@ fun HomeScreen(
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             items(metrics) { m ->
-                MetricTile(metric = m, onClick = { onOpenMetric(m.key) })
+                MetricTile(metric = m, onClick = {
+                    when (m.key) {
+                        "harvest" -> onOpenMetric("harvest")
+                        "planner" -> onOpenMetric("planner") // handled in Nav as planner/{mode}
+                        else -> onOpenMetric(m.key)
+                    }
+                })
             }
+            item { Spacer(Modifier.height(12.dp)) }
         }
     }
 }

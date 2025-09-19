@@ -8,6 +8,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,16 +17,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Notes
-import androidx.compose.material.icons.rounded.Air
-import androidx.compose.material.icons.rounded.Bolt
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Science
-import androidx.compose.material.icons.rounded.Thermostat
-import androidx.compose.material.icons.rounded.Warning
-import androidx.compose.material.icons.rounded.WaterDrop
-import androidx.compose.material3.*
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
@@ -40,12 +49,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
+import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /* -----------------------------------------------------------------------
-   DETAIL SCREEN (self-contained)
+   DETAIL SCREEN (updated to your spec)
+   - Mould: Fan big tile first, then Mould Watch, then dynamic Recommended adjustments
+   - Fan: single on/off big tile + tips
+   - Irrigation -> Pump: single big switch; schedule is informative card; tips card
+   - Humidity/Temperature: add Fan button (note) + dynamic Tips
+   - pH/EC: explanatory Tips
+   - Notes: add Tips
+   - Camera: take picture + pick + Live feed button (stub)
+   - All screens: dynamic Tips where relevant
    ----------------------------------------------------------------------- */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -77,12 +94,64 @@ fun DetailScreen(
         ) {
             when (metricKey) {
                 "fan" -> FanPanel()
-                "irrigation" -> IrrigationPanel()
+                "irrigation" -> IrrigationPanel() // UI shows "Pump"
                 "mold" -> MoldPanel()
                 "notes" -> NotesPanelFancy()
                 "camera" -> CameraPanel(context)
                 else -> SensorPanel(metricKey)
             }
+        }
+    }
+}
+
+/* ---------------------------- Reusable UI ------------------------------ */
+
+@Composable
+private fun BigToggleTile(
+    title: String,
+    subtitle: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    ElevatedCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.elevatedCardElevation(4.dp)
+    ) {
+        Row(
+            Modifier
+                .padding(18.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Switch(checked = checked, onCheckedChange = onCheckedChange)
+        }
+    }
+}
+
+@Composable
+private fun TipsCard(title: String = "Tips", lines: List<String>) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.elevatedCardElevation(3.dp)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            lines.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium) }
         }
     }
 }
@@ -118,7 +187,7 @@ private fun SensorPanel(metricKey: String) {
             value = Random.nextDouble(spec.min.toDouble(), spec.max.toDouble()).toFloat()
             series.add(value)
             if (series.size > 36) series.removeAt(0)
-            delay(1500)
+            kotlinx.coroutines.delay(1500)
         }
     }
 
@@ -137,6 +206,20 @@ private fun SensorPanel(metricKey: String) {
         statusChip = { StatusPill(statusText, statusColor) }
     )
 
+    // Quick Fan control + note for Humidity/Temperature
+    if (metricKey == "humidity" || metricKey == "temperature") {
+        var fanOn by remember { mutableStateOf(false) }
+        Spacer(Modifier.height(12.dp))
+        BigToggleTile(
+            title = "Fan",
+            subtitle = "This controls the tent fan",
+            checked = fanOn,
+            onCheckedChange = { fanOn = it }
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+
     SRSectionCard(title = "Last 24 readings", subtitle = "Live feed (simulated)") {
         Sparkline(series)
         Spacer(Modifier.height(8.dp))
@@ -148,6 +231,40 @@ private fun SensorPanel(metricKey: String) {
             }
         }
     }
+
+    Spacer(Modifier.height(12.dp))
+
+    // Dynamic Tips per screen
+    val tips = when (metricKey) {
+        "humidity" -> buildList {
+            when {
+                value > 80 -> add("Humidity high: increase airflow; shorten pump duration.")
+                value < 50 -> add("Humidity low: consider slightly longer/closer pump cycles.")
+                else -> add("Humidity within ideal range.")
+            }
+            add("Keep gentle airflow across canopy; avoid pooling water.")
+        }
+        "temperature" -> buildList {
+            when {
+                value > 30 -> add("Temp high: increase ventilation; consider shade/cooler intake.")
+                value < 18 -> add("Temp low: reduce drafts; insulate base of tent/trays.")
+                else -> add("Temperature within ideal range.")
+            }
+            add("Check pump timing; warmer rooms evaporate faster.")
+        }
+        "ph" -> listOf(
+            "If pH < 5.8 (acidic): add pH-Up in small increments; re-measure.",
+            "If pH > 6.5 (alkaline): add pH-Down; re-measure.",
+            "Stable pH keeps nutrients available to roots."
+        )
+        "ec" -> listOf(
+            "Low EC: increase nutrient concentration gradually; avoid big jumps.",
+            "High EC: dilute reservoir with clean water, then re-check.",
+            "Match EC to crop stage; seedlings prefer weaker solution."
+        )
+        else -> emptyList()
+    }
+    if (tips.isNotEmpty()) TipsCard(lines = tips)
 }
 
 /* ------------------------------ Fan panel ------------------------------ */
@@ -155,94 +272,58 @@ private fun SensorPanel(metricKey: String) {
 @Composable
 private fun FanPanel() {
     var fanOn by remember { mutableStateOf(false) }
-    var boostMin by remember { mutableFloatStateOf(10f) }
-
-    ValueHeader(
-        icon = Icons.Rounded.Air,
-        label = "Circulation Fan",
-        valueText = if (fanOn) "ON" else "OFF",
-        statusChip = {
-            StatusPill(
-                if (fanOn) "Running" else "Stopped",
-                if (fanOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-            )
-        }
+    BigToggleTile(
+        title = "Circulation Fan",
+        subtitle = "This controls the tent fan",
+        checked = fanOn,
+        onCheckedChange = { fanOn = it }
     )
-
-    SRSectionCard("Manual control", "Quickly move air to dry the canopy.") {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Fan", modifier = Modifier.weight(1f))
-            Switch(checked = fanOn, onCheckedChange = { fanOn = it })
-        }
-        Spacer(Modifier.height(8.dp))
-        Text("Boost for ${boostMin.roundToInt()} min")
-        Slider(
-            value = boostMin,
-            onValueChange = { boostMin = it },
-            valueRange = 5f..30f,
-            steps = 5
-        )
-        Button(onClick = { fanOn = true }) { Text("Start Boost") }
-    }
-
-    SRSectionCard("Tip") { Text("After every irrigation, run the fan 10 min to reduce mould risk.") }
+    Spacer(Modifier.height(12.dp))
+    TipsCard(lines = listOf(
+        if (fanOn) "Fan is ON; airflow reduces mould risk." else "Turn fan ON after irrigation or when humidity is high.",
+        "Aim airflow across the canopy, not directly at seedlings."
+    ))
 }
 
-/* --------------------------- Irrigation panel -------------------------- */
+/* --------------------------- Pump (Irrigation) ------------------------- */
 
 @Composable
 private fun IrrigationPanel() {
-    var auto by remember { mutableStateOf(true) }
-    var seconds by remember { mutableFloatStateOf(15f) }
-    var intervalH by remember { mutableFloatStateOf(2f) }
+    var pumpAuto by remember { mutableStateOf(true) }
+    var pumpOn by remember { mutableStateOf(false) }
 
-    ValueHeader(
-        icon = Icons.Rounded.WaterDrop,
-        label = "Irrigation",
-        valueText = if (auto) "AUTO" else "MANUAL",
-        statusChip = {
-            StatusPill(
-                if (auto) "Scheduled" else "Off",
-                if (auto) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
-            )
-        }
+    // Big switch for Pump (instead of manual run)
+    BigToggleTile(
+        title = "Pump",
+        subtitle = "Toggle to run pump (simulated)",
+        checked = pumpOn,
+        onCheckedChange = { pumpOn = it }
     )
+    Spacer(Modifier.height(12.dp))
 
-    SRSectionCard("Schedule", "Simple time-based priming for fodder mats.") {
-        Text("Duration: ${seconds.roundToInt()} s")
-        Slider(
-            value = seconds,
-            onValueChange = { seconds = it },
-            valueRange = 5f..60f,
-            steps = 10
-        )
-        Spacer(Modifier.height(4.dp))
-        Text("Every: ${intervalH.roundToInt()} h (06:00–20:00)")
-        Slider(
-            value = intervalH,
-            onValueChange = { intervalH = it },
-            valueRange = 1f..6f,
-            steps = 4
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Auto", modifier = Modifier.weight(1f))
-            Switch(checked = auto, onCheckedChange = { auto = it })
+    // Informative schedule (no sliders)
+    SRSectionCard("Schedule (info)") {
+        Text("Duration: 15 s")
+        Text("Every: 2 h (active 06:00–20:00)")
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
+            Text("Auto schedule", modifier = Modifier.weight(1f))
+            Switch(checked = pumpAuto, onCheckedChange = { pumpAuto = it })
         }
     }
+    Spacer(Modifier.height(12.dp))
 
-    SRSectionCard("Manual run") {
-        Button(onClick = { /* simulate pump run */ }) {
-            Icon(Icons.Rounded.PlayArrow, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Run pump ${seconds.roundToInt()} s")
-        }
-    }
+    TipsCard(lines = listOf(
+        "Short, frequent cycles keep mats moist without pooling.",
+        "Increase interval if you see mould or standing water.",
+        "Decrease interval if edges dry out between cycles."
+    ))
 }
 
 /* ----------------------------- Mould panel ----------------------------- */
 
 @Composable
 private fun MoldPanel() {
+    // Inputs that drive MRI (simulate/live)
     var temp by remember { mutableFloatStateOf(22f) }
     var rh by remember { mutableFloatStateOf(70f) }
     var minutes by remember { mutableFloatStateOf(45f) }
@@ -255,6 +336,16 @@ private fun MoldPanel() {
         else -> "OK" to MaterialTheme.colorScheme.primary
     }
 
+    // 1) Fan big tile FIRST
+    BigToggleTile(
+        title = "Fan",
+        subtitle = "This controls the tent fan",
+        checked = fanOn,
+        onCheckedChange = { fanOn = it }
+    )
+    Spacer(Modifier.height(12.dp))
+
+    // 2) Mould Watch header
     ValueHeader(
         icon = Icons.Rounded.Warning,
         label = "Mould Watch",
@@ -262,43 +353,32 @@ private fun MoldPanel() {
         unit = "MRI",
         statusChip = { StatusPill(label, color) }
     )
+    Spacer(Modifier.height(12.dp))
 
+    // 3) Current conditions
     SRSectionCard("Current conditions") {
         Row {
             InfoStat("Temp", "${temp.roundToInt()} °C")
             InfoStat("Humidity", "${rh.roundToInt()} %")
             InfoStat("Since irrigation", "${minutes.roundToInt()} min")
         }
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Fan", modifier = Modifier.weight(1f))
-            Switch(checked = fanOn, onCheckedChange = { fanOn = it })
+    }
+    Spacer(Modifier.height(12.dp))
+
+    // 4) Recommended adjustments (dynamic text, no sliders)
+    val recs = buildList {
+        if (mri >= 67) {
+            add("Run fan continuously for 20–30 min after irrigation.")
+            add("Reduce irrigation duration or increase interval.")
+            add("Aim humidity below 70%; increase canopy airflow.")
+        } else if (mri >= 34) {
+            add("Add a 10-minute fan cycle after each irrigation.")
+            add("Avoid standing water on trays; improve drain-off.")
+        } else {
+            add("Conditions are good. Keep steady airflow across mats.")
         }
     }
-
-    SRSectionCard("Advice") { Text(adviceForMold(mri)) }
-
-    SRSectionCard("Try adjustments") {
-        Text("Temperature: ${temp.roundToInt()} °C")
-        Slider(
-            value = temp,
-            onValueChange = { temp = it },
-            valueRange = 15f..30f
-        )
-        Text("Humidity: ${rh.roundToInt()} %")
-        Slider(
-            value = rh,
-            onValueChange = { rh = it },
-            valueRange = 40f..95f
-        )
-        Text("Minutes since irrigation: ${minutes.roundToInt()}")
-        Slider(
-            value = minutes,
-            onValueChange = { minutes = it },
-            valueRange = 0f..240f,
-            steps = 10
-        )
-    }
+    TipsCard(title = "Recommended adjustments", lines = recs)
 }
 
 /* ------------------------------ Notes panel ---------------------------- */
@@ -325,6 +405,11 @@ private fun NotesPanelFancy() {
             Text("Save")
         }
     }
+    Spacer(Modifier.height(12.dp))
+    TipsCard(lines = listOf(
+        "Use notes to track changes (pump timing, nutrients, cleaning).",
+        "Attach images of tray progress for quick visual comparisons."
+    ))
 }
 
 /* ------------------------------ Camera panel --------------------------- */
@@ -332,9 +417,15 @@ private fun NotesPanelFancy() {
 @Composable
 private fun CameraPanel(context: Context) {
     var pickedUri by remember { mutableStateOf<Uri?>(null) }
-    val picker = rememberLauncherForActivityResult(
+    var captured by remember { mutableStateOf<Bitmap?>(null) }
+
+    val galleryPicker = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
     ) { uri -> pickedUri = uri }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bmp -> captured = bmp }
 
     ValueHeader(
         icon = Icons.Rounded.CameraAlt,
@@ -342,25 +433,32 @@ private fun CameraPanel(context: Context) {
         valueText = "Open"
     )
 
-    SRSectionCard("Gallery") {
-        Button(onClick = {
-            picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-        }) { Text("Pick a photo") }
-
-        AnimatedVisibility(visible = pickedUri != null) {
-            val bmp = remember(pickedUri) { pickedUri?.let { loadBitmap(context, it) } }
-            bmp?.let {
-                Spacer(Modifier.height(12.dp))
-                Image(
-                    bitmap = it.asImageBitmap(),
-                    contentDescription = "Preview",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 220.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.large)
-                        .padding(6.dp)
-                )
-            }
+    SRSectionCard("Capture") {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { cameraLauncher.launch(null) }) { Text("Take picture") }
+            OutlinedButton(onClick = {
+                galleryPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) { Text("Pick from gallery") }
+            OutlinedButton(onClick = {
+                // TODO: wire to your live stream Activity/URL
+            }) { Text("Open live feed") }
+        }
+        captured?.let {
+            Spacer(Modifier.height(12.dp))
+            Image(
+                bitmap = it.asImageBitmap(),
+                contentDescription = "Captured",
+                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp)
+            )
+        }
+        pickedUri?.let { uri ->
+            Spacer(Modifier.height(12.dp))
+            val bmp = remember(uri) { loadBitmap(context, uri) }
+            Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = "Selected",
+                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp)
+            )
         }
     }
 }
@@ -378,24 +476,31 @@ private fun computeMoldRiskIndex(
     minutesSinceIrrigation: Int,
     fanOn: Boolean
 ): Float {
-    val rhScore = ((rhPct - 50f) / 40f).coerceIn(0f, 1f) * 50f         // 0..50
-    val tScore = ((tempC - 18f) / 10f).coerceIn(0f, 1f) * 30f          // 0..30
-    val wetScore = (1f - (minutesSinceIrrigation / 120f).coerceIn(0f, 1f)) * 20f // 0..20
-    val fanBonus = if (fanOn) -10f else 0f
-    return (rhScore + tScore + wetScore + fanBonus).coerceIn(0f, 100f)
-}
+    // Dew-point proximity + humidity + wetness window + airflow
+    val gamma = ln((rhPct / 100f).toDouble()) + (17.62 * tempC) / (243.12 + tempC)
+    val td = (243.12 * gamma / (17.62 - gamma)).toFloat()
+    val nearWet = (tempC - td) <= 2f || rhPct >= 85f
 
-private fun adviceForMold(mri: Float): String = when {
-    mri >= 67 -> "Action needed: Increase airflow, shorten watering, and dry mats. Clean trays with dilute H₂O₂."
-    mri >= 34 -> "Watch: Add a 10-min fan boost after irrigation and avoid over-watering."
-    else -> "Good: Keep current schedule. Ensure gentle airflow across the trays."
+    val wetScore = when {
+        minutesSinceIrrigation < 30 -> 1f
+        minutesSinceIrrigation < 120 -> 0.5f
+        nearWet -> 0.6f
+        else -> 0f
+    }
+    val humidityScore = ((rhPct - 70f) / 30f).coerceIn(0f, 1f)
+    val tempScore = when {
+        tempC <= 15f || tempC >= 35f -> 0f
+        tempC <= 25f -> ((tempC - 15f) / 10f).coerceIn(0f, 1f)
+        else -> ((35f - tempC) / 10f).coerceIn(0f, 1f)
+    }
+    val airflowPenalty = if (fanOn) 0f else 0.2f
+    val raw = 0.4f * humidityScore + 0.3f * tempScore + 0.3f * wetScore
+    return ((raw + airflowPenalty) * 100f).coerceIn(0f, 100f)
 }
 
 private fun Float.prettyInt(): String = this.roundToInt().toString()
 
-/* -----------------------------------------------------------------------
-   Embedded UI kit (local/private so there’s no cross-file confusion)
-   ----------------------------------------------------------------------- */
+/* -------------------------- Embedded UI kit --------------------------- */
 
 @Composable
 private fun SRSectionCard(
@@ -431,7 +536,7 @@ private fun ValueHeader(
     icon: ImageVector,
     label: String,
     valueText: String,
-    modifier: Modifier = Modifier,          // keep first optional to satisfy lint
+    modifier: Modifier = Modifier,
     unit: String = "",
     statusChip: @Composable (() -> Unit)? = null,
     gradient: Brush? = null
