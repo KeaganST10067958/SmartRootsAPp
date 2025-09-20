@@ -11,6 +11,8 @@ import org.json.JSONArray
 import org.json.JSONObject
 import com.keagan.smartroots.model.Note
 import java.util.UUID
+import androidx.datastore.preferences.core.edit
+import kotlinx.coroutines.flow.first
 
 private const val STORE_NAME = "smartroots_prefs"
 private val Context.dataStore by preferencesDataStore(STORE_NAME)

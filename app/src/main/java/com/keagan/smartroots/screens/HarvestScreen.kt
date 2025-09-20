@@ -18,6 +18,8 @@ import com.keagan.smartroots.data.Prefs.HarvestBatch
 import kotlinx.coroutines.launch
 import java.util.UUID
 import kotlin.math.max
+import androidx.compose.material.icons.rounded.Delete
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,13 +101,13 @@ fun HarvestScreen(onBack: () -> Unit) {
 
 @Composable
 private fun HarvestCard(
-    batch: HarvestBatch,
+    batch: Prefs.HarvestBatch,
     onHarvest: () -> Unit,
     onRemove: () -> Unit
 ) {
     val now = System.currentTimeMillis()
     val daysSinceStart = ((now - batch.startEpoch) / (1000L * 60 * 60 * 24)).toInt()
-    val left = max(0, batch.daysToHarvest - daysSinceStart)
+    val left = kotlin.math.max(0, batch.daysToHarvest - daysSinceStart)
     val progress = (daysSinceStart.toFloat() / batch.daysToHarvest).coerceIn(0f, 1f)
 
     ElevatedCard(Modifier.fillMaxWidth()) {
@@ -113,20 +115,29 @@ private fun HarvestCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(batch.crop, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.weight(1f))
-                Text("${left} d left", style = MaterialTheme.typography.titleMedium)
+                Text("$left d left", style = MaterialTheme.typography.titleMedium)
             }
             LinearProgressIndicator(progress = { progress })
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Started ${daysSinceStart} d ago • ${batch.daysToHarvest} d target", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "Started $daysSinceStart d ago • Target ${batch.daysToHarvest} d",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.weight(1f))
                 TextButton(onClick = onHarvest) { Text("Harvest") }
-                TextButton(onClick = onRemove, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                    Text("Remove")
+                // 🔻 Changed: bin icon instead of "Remove" text
+                IconButton(onClick = onRemove) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Rounded.Delete,
+                        contentDescription = "Remove batch",
+                        tint = MaterialTheme.colorScheme.error
+                    )
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun AddBatchDialog(
