@@ -11,7 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.stringResource   // ✅ important
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -20,9 +20,9 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 // Color mapping for statuses
-private val DangerRed       = Color(0xFFD32F2F) // High
-private val WarningOrange   = Color(0xFFFFA000) // Low / middle warning
-private val SuccessLightGreen = Color(0xFF8BC34A) // Ideal
+private val DangerRed           = Color(0xFFD32F2F) // High
+private val WarningOrange       = Color(0xFFFFA000) // Low / mid warning
+private val SuccessLightGreen   = Color(0xFF8BC34A) // Ideal
 
 private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (status) {
     "High"  -> DangerRed
@@ -33,7 +33,8 @@ private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (s
 
 @Composable
 fun MetricTile(metric: Metric, onClick: () -> Unit) {
-    val special = setOf("mold", "fan", "irrigation", "notes", "camera")
+    // Mark tiles that open dedicated screens
+    val special = setOf("mold", "fan", "irrigation", "notes", "camera", "light")
 
     if (metric.key in special) {
         Surface(
@@ -61,7 +62,7 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                     )
                     Text(
                         text = stringResource(metric.tipRes),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall, // ✅ fixed typo
                         color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -148,7 +149,7 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                 }
 
                 Text(
-                    text = stringResource(metric.tipRes), // “Target …”
+                    text = stringResource(metric.tipRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurface.copy(alpha = 0.70f),
                     maxLines = 1,

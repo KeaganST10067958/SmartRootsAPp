@@ -7,7 +7,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -87,6 +86,7 @@ fun DetailScreen(
                 "mold" -> MoldPanel()
                 "notes" -> NotesPanelFancy()
                 "camera" -> CameraPanel(context)
+                "light" -> LightPanel()                   // ← NEW
                 else -> SensorPanel(metricKey)
             }
         }
@@ -212,7 +212,7 @@ private fun SensorPanel(metricKey: String) {
         }
     }
 
-    // Tips
+    // Tips (unchanged)
     val tips = when (metricKey) {
         "humidity" -> listOf(
             if (statusText == "High") "Humidity high: increase airflow; shorten pump duration."
@@ -280,11 +280,7 @@ private fun IrrigationPanel() {
         valueColor = if (pumpOn) SuccessLightGreen else MaterialTheme.colorScheme.onSurfaceVariant
     )
 
-    // Main tile with the pill at the bottom (no schedule toggle)
     BigTile(title = "Pump", subtitle = "Toggle to run pump (simulated)") {
-        Spacer(Modifier.height(4.dp))
-        // … any quick info above the switch if you want
-        Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             PillSwitch(checked = pumpOn, onCheckedChange = { pumpOn = it })
         }
@@ -292,7 +288,6 @@ private fun IrrigationPanel() {
 
     Spacer(Modifier.height(12.dp))
 
-    // Schedule info only (no switch)
     SRSectionCard("Schedule (info)") {
         Text("Duration: 15 s")
         Text("Every: 2 h (active 06:00–20:00)")
@@ -322,7 +317,6 @@ private fun MoldPanel() {
         else -> "OK" to SuccessLightGreen
     }
 
-    // Mould Watch first
     ValueHeader(
         icon = Icons.Rounded.Warning,
         label = "Mould Watch",
@@ -332,7 +326,6 @@ private fun MoldPanel() {
         statusChip = { StatusPill(label, color) }
     )
 
-    // Fan tile under it with pill at the bottom
     BigTile(title = "Fan", subtitle = "This controls the tent fan") {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
             PillSwitch(checked = fanOn, onCheckedChange = { fanOn = it })
@@ -363,6 +356,37 @@ private fun MoldPanel() {
     TipsCard(title = "Recommended adjustments", lines = recs)
 }
 
+/* ------------------------------ Light panel ---------------------------- */
+
+@Composable
+private fun LightPanel() {
+    var lightOn by remember { mutableStateOf(false) }
+
+    ValueHeader(
+        icon = Icons.Rounded.Lightbulb,
+        label = "Light",
+        valueText = if (lightOn) "ON" else "OFF",
+        valueColor = if (lightOn) SuccessLightGreen else MaterialTheme.colorScheme.onSurfaceVariant
+    )
+
+    BigTile(title = "Light", subtitle = "Toggle grow lights (simulated)") {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            PillSwitch(checked = lightOn, onCheckedChange = { lightOn = it })
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    TipsCard(
+        title = "Tips",
+        lines = listOf(
+            "Fodder: 12–16 h of light per day; keep trays evenly lit.",
+            "Veg: 14–18 h for leafy greens; keep 20–40 cm from canopy.",
+            "If leaves stretch, add light or lower the fixture a little."
+        )
+    )
+}
+
 /* ------------------------------ Notes panel ---------------------------- */
 
 @Composable
@@ -378,10 +402,7 @@ private fun NotesPanelFancy() {
 
     val takePicture = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicturePreview()
-    ) { bmp ->
-        // Save preview to MediaStore? For simplicity, skip persistence for the preview
-        // Here we just ignore if null; you can extend saving later.
-    }
+    ) { /* (optional) save preview */ }
 
     val pickImage = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -486,10 +507,9 @@ private fun NoteItem(note: Note, onDelete: (String) -> Unit) {
 
 @Composable
 private fun CameraPanel(context: Context) {
-    // Scanner
     val scanLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
-    ) { /* TODO: feed to AI later */ }
+    ) { /* feed to AI later */ }
 
     ValueHeader(
         icon = Icons.Rounded.CameraAlt,
@@ -500,7 +520,6 @@ private fun CameraPanel(context: Context) {
     BigTile(title = "Capture") {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = { scanLauncher.launch(null) }) { Text("Plant scanner") }
-            // Live with red dot
             OutlinedButton(onClick = { /* open live feed screen */ }) {
                 Box(
                     modifier = Modifier

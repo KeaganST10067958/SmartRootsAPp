@@ -30,7 +30,10 @@
     <string name="camera">Camera</string>
     <string name="tip_camera">Capture a photo or open the live feed.</string>
 
-    <!-- Detail headers / controls (legacy but safe to keep) -->
+    <!-- New Light tile -->
+    <string name="tip_light">Toggle grow lights and see simple tips.</string>
+
+    <!-- Detail headers / controls -->
     <string name="sensor_enabled">Sensor enabled</string>
     <string name="simple_readout">Live reading (simulated)</string>
     <string name="save">Save</string>
@@ -45,7 +48,7 @@
     <string name="status_on">On</string>
     <string name="status_off">Off</string>
 
-    <!-- RENAMED LABEL: keep key 'irrigation' for routing; label shows 'Pump' -->
+    <!-- Pump -->
     <string name="irrigation">Pump</string>
     <string name="tip_irrigation">Pump schedule info and manual toggle.</string>
 
