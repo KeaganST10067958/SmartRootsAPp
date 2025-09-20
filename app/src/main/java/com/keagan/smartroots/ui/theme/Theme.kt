@@ -6,34 +6,49 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// Night: forest green
-private val DarkForestColors = darkColorScheme(
-    primary = Color(0xFF2EA36A),     // forest mint
-    secondary = Color(0xFF3FB489),
-    background = Color(0xFF0A100C),
-    surface = Color(0xFF0E1511),
-    surfaceVariant = Color(0xFF142019),
-    onPrimary = Color(0xFF021C10),
-    onSecondary = Color(0xFFE7FFE7),
-    onBackground = Color(0xFFE7FFE7),
-    onSurface = Color(0xFFE7FFE7)
+// ---------------- Dark (new leaf palette) ----------------
+private val DarkColors = darkColorScheme(
+    primary = LeafGreen,            // buttons, active chips
+    onPrimary = OnDarkHigh,         // text/icons on primary
+
+    secondary = LeafChartreuse,     // accents (status, small highlights)
+    onSecondary = LeafNight,
+
+    tertiary = LeafForest,          // "warning-ish" accent we use for Low/High state
+    onTertiary = OnDarkHigh,
+
+    background = LeafNight,         // app background
+    onBackground = OnDarkHigh,
+
+    surface = Color(0xFF0A1A0A),    // slightly lighter than background
+    onSurface = OnDarkHigh,
+
+    surfaceVariant = Color(0xFF0E2010),
+    onSurfaceVariant = OnDarkMed,
+
+    outline = OutlineDark
+    // error / errorContainer left default from M3
 )
 
-// Day: high-contrast for sunlight
-private val LightSunColors = lightColorScheme(
-    primary = Color(0xFF1E7A4F),     // deep green (good outdoors)
-    secondary = Color(0xFF0B6E99),   // teal/blue accents
-    background = Color(0xFFFAFAFA),  // near white for glare resistance
+// ---------------- Light (unchanged from your current look) ----------------
+private val LightPastelColors = lightColorScheme(
+    primary = Color(0xFF7BE3B3), // pastel mint
+    secondary = Color(0xFF79C7FF), // pastel blue
+    background = Color(0xFFF7FBF8),
     surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFF1F4F2),
-    onPrimary = Color(0xFFFFFFFF),
-    onSecondary = Color(0xFFFFFFFF),
-    onBackground = Color(0xFF0A0F0C),// near-black text
-    onSurface = Color(0xFF0A0F0C)
+    surfaceVariant = Color(0xFFF4FAF7),
+    onPrimary = Color(0xFF08361B),
+    onSecondary = Color(0xFF16321F),
+    onBackground = Color(0xFF16321F),
+    onSurface = Color(0xFF16321F)
 )
 
 @Composable
 fun SmartRootsTheme(light: Boolean, content: @Composable () -> Unit) {
-    val colors = if (light) LightSunColors else DarkForestColors
-    MaterialTheme(colorScheme = colors, typography = androidx.compose.material3.Typography(), content = content)
+    val colors = if (light) LightPastelColors else DarkColors
+    MaterialTheme(
+        colorScheme = colors,
+        typography = androidx.compose.material3.Typography(),
+        content = content
+    )
 }

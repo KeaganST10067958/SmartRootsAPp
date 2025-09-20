@@ -7,9 +7,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,22 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ElevatedCard
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Alignment
@@ -53,17 +35,17 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-/* -----------------------------------------------------------------------
-   DETAIL SCREEN (updated to your spec)
-   - Mould: Fan big tile first, then Mould Watch, then dynamic Recommended adjustments
-   - Fan: single on/off big tile + tips
-   - Irrigation -> Pump: single big switch; schedule is informative card; tips card
-   - Humidity/Temperature: add Fan button (note) + dynamic Tips
-   - pH/EC: explanatory Tips
-   - Notes: add Tips
-   - Camera: take picture + pick + Live feed button (stub)
-   - All screens: dynamic Tips where relevant
-   ----------------------------------------------------------------------- */
+// ---- Status colors (same mapping as tiles) ----
+private val DangerRed         = Color(0xFFD32F2F) // High
+private val WarningOrange     = Color(0xFFFFA000) // Low / middle warning
+private val SuccessLightGreen = Color(0xFF8BC34A) // Ideal
+
+private fun colorForStatus(label: String, scheme: ColorScheme): Color = when (label) {
+    "High"  -> DangerRed
+    "Low"   -> WarningOrange
+    "Ideal" -> SuccessLightGreen
+    else    -> scheme.onSurfaceVariant
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,8 +76,8 @@ fun DetailScreen(
         ) {
             when (metricKey) {
                 "fan" -> FanPanel()
-                "irrigation" -> IrrigationPanel() // UI shows "Pump"
-                "mold" -> MoldPanel()
+                "irrigation" -> IrrigationPanel()
+                "mold" -> MoldPanel()          // Mould Watch first
                 "notes" -> NotesPanelFancy()
                 "camera" -> CameraPanel(context)
                 else -> SensorPanel(metricKey)
@@ -191,11 +173,14 @@ private fun SensorPanel(metricKey: String) {
         }
     }
 
-    val (statusText, statusColor) = when {
-        spec.ideal == null -> "—" to MaterialTheme.colorScheme.outline
-        value < spec.ideal.start -> "Low" to MaterialTheme.colorScheme.tertiary
-        value > spec.ideal.endInclusive -> "High" to MaterialTheme.colorScheme.tertiary
-        else -> "Ideal" to MaterialTheme.colorScheme.primary
+    val (statusText, statusColor) = run {
+        val label = when {
+            spec.ideal == null -> "—"
+            value < spec.ideal.start -> "Low"
+            value > spec.ideal.endInclusive -> "High"
+            else -> "Ideal"
+        }
+        label to colorForStatus(label, MaterialTheme.colorScheme)
     }
 
     ValueHeader(
@@ -203,10 +188,12 @@ private fun SensorPanel(metricKey: String) {
         label = spec.label,
         valueText = value.roundToInt().toString(),
         unit = spec.unit,
-        statusChip = { StatusPill(statusText, statusColor) }
+        valueColor = statusColor,                     // ✅ color the number
+        statusChip = {
+            StatusPill(statusText, statusColor)       // ✅ chip matches
+        }
     )
 
-    // Quick Fan control + note for Humidity/Temperature
     if (metricKey == "humidity" || metricKey == "temperature") {
         var fanOn by remember { mutableStateOf(false) }
         Spacer(Modifier.height(12.dp))
@@ -234,7 +221,6 @@ private fun SensorPanel(metricKey: String) {
 
     Spacer(Modifier.height(12.dp))
 
-    // Dynamic Tips per screen
     val tips = when (metricKey) {
         "humidity" -> buildList {
             when {
@@ -292,7 +278,6 @@ private fun IrrigationPanel() {
     var pumpAuto by remember { mutableStateOf(true) }
     var pumpOn by remember { mutableStateOf(false) }
 
-    // Big switch for Pump (instead of manual run)
     BigToggleTile(
         title = "Pump",
         subtitle = "Toggle to run pump (simulated)",
@@ -301,7 +286,6 @@ private fun IrrigationPanel() {
     )
     Spacer(Modifier.height(12.dp))
 
-    // Informative schedule (no sliders)
     SRSectionCard("Schedule (info)") {
         Text("Duration: 15 s")
         Text("Every: 2 h (active 06:00–20:00)")
@@ -323,7 +307,6 @@ private fun IrrigationPanel() {
 
 @Composable
 private fun MoldPanel() {
-    // Inputs that drive MRI (simulate/live)
     var temp by remember { mutableFloatStateOf(22f) }
     var rh by remember { mutableFloatStateOf(70f) }
     var minutes by remember { mutableFloatStateOf(45f) }
@@ -331,12 +314,23 @@ private fun MoldPanel() {
 
     val mri = computeMoldRiskIndex(temp, rh, minutes.roundToInt(), fanOn)
     val (label, color) = when {
-        mri >= 67 -> "High" to MaterialTheme.colorScheme.error
-        mri >= 34 -> "Caution" to MaterialTheme.colorScheme.tertiary
-        else -> "OK" to MaterialTheme.colorScheme.primary
+        mri >= 67 -> "High" to DangerRed
+        mri >= 34 -> "Caution" to WarningOrange
+        else -> "OK" to SuccessLightGreen
     }
 
-    // 1) Fan big tile FIRST
+    // Mould Watch FIRST
+    ValueHeader(
+        icon = Icons.Rounded.Warning,
+        label = "Mould Watch",
+        valueText = mri.roundToInt().toString(),
+        unit = "MRI",
+        valueColor = color,                 // ✅ number colored
+        statusChip = { StatusPill(label, color) }
+    )
+    Spacer(Modifier.height(12.dp))
+
+    // Fan toggle BELOW
     BigToggleTile(
         title = "Fan",
         subtitle = "This controls the tent fan",
@@ -345,17 +339,6 @@ private fun MoldPanel() {
     )
     Spacer(Modifier.height(12.dp))
 
-    // 2) Mould Watch header
-    ValueHeader(
-        icon = Icons.Rounded.Warning,
-        label = "Mould Watch",
-        valueText = mri.roundToInt().toString(),
-        unit = "MRI",
-        statusChip = { StatusPill(label, color) }
-    )
-    Spacer(Modifier.height(12.dp))
-
-    // 3) Current conditions
     SRSectionCard("Current conditions") {
         Row {
             InfoStat("Temp", "${temp.roundToInt()} °C")
@@ -365,7 +348,6 @@ private fun MoldPanel() {
     }
     Spacer(Modifier.height(12.dp))
 
-    // 4) Recommended adjustments (dynamic text, no sliders)
     val recs = buildList {
         if (mri >= 67) {
             add("Run fan continuously for 20–30 min after irrigation.")
@@ -476,7 +458,6 @@ private fun computeMoldRiskIndex(
     minutesSinceIrrigation: Int,
     fanOn: Boolean
 ): Float {
-    // Dew-point proximity + humidity + wetness window + airflow
     val gamma = ln((rhPct / 100f).toDouble()) + (17.62 * tempC) / (243.12 + tempC)
     val td = (243.12 * gamma / (17.62 - gamma)).toFloat()
     val nearWet = (tempC - td) <= 2f || rhPct >= 85f
@@ -538,6 +519,7 @@ private fun ValueHeader(
     valueText: String,
     modifier: Modifier = Modifier,
     unit: String = "",
+    valueColor: Color? = null,                 // ✅ NEW: optional color for the number
     statusChip: @Composable (() -> Unit)? = null,
     gradient: Brush? = null
 ) {
@@ -573,7 +555,8 @@ private fun ValueHeader(
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             valueText,
-                            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold)
+                            style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                            color = valueColor ?: MaterialTheme.colorScheme.onSurface // ✅ apply color
                         )
                         if (unit.isNotBlank()) {
                             Spacer(Modifier.width(6.dp))
