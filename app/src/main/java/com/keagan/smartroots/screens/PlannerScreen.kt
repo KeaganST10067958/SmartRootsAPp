@@ -1,188 +1,250 @@
 package com.keagan.smartroots.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext              // ✅ fix
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.keagan.smartroots.data.Prefs
-import com.keagan.smartroots.widgets.TipsCard
 import kotlinx.coroutines.launch
 
-private data class CropOption(val name: String, val group: Int)
+/* ------------------------- Overlay helper ------------------------- */
 
+@Composable
+private fun overlayColors(): Pair<Color, Color> {
+    val c = MaterialTheme.colorScheme
+    val isLight = c.background.luminance() > 0.5f
+    val container = if (isLight) Color.White.copy(alpha = 0.85f)
+    else Color(0xFF0E1A0E).copy(alpha = 0.70f)
+    val content = if (isLight) Color.Black else Color.White
+    return container to content
+}
+
+/* ------------------------- Public entry ------------------------- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlannerScreen(
-    tent: String,
+    tent: String,                  // "veg" | "fodder"
     onBack: () -> Unit
 ) {
-    val normalizedTent = if (tent.equals("veg", true)) "veg" else "fodder"
-    val title = if (normalizedTent == "veg") "Crop Planner – Vegetables" else "Crop Planner – Fodder"
-
-    // ---- Options (group = same-colour = grow well together) ----
-    val vegOptions = remember {
-        listOf(
-            // group 1
-            CropOption("Lettuce", 1), CropOption("Spinach", 1), CropOption("Basil", 1),
-            CropOption("Rocket/Arugula", 1),
-            // group 2
-            CropOption("Kale", 2), CropOption("Swiss chard", 2), CropOption("Parsley", 2),
-            CropOption("Coriander", 2),
-            // group 3 (fruiting hydro)
-            CropOption("Tomato (hydro)", 3), CropOption("Cherry tomato (hydro)", 3),
-            CropOption("Cucumber (hydro)", 3), CropOption("Pepper/Chilli (hydro)", 3),
-            // group 4 (cool herbs/brassicas)
-            CropOption("Mint", 4), CropOption("Chives", 4), CropOption("Dill", 4), CropOption("Pak choi", 4),
-        )
-    }
-    val fodderOptions = remember {
-        listOf(
-            CropOption("Barley fodder", 1), CropOption("Wheat fodder", 1),
-            CropOption("Oats fodder", 2),   CropOption("Maize fodder", 2),
-            CropOption("Sorghum fodder", 3), CropOption("Sunflower fodder", 3),
-            CropOption("Lucerne/Alfalfa fodder", 4), CropOption("Ryegrass fodder", 4)
-        )
-    }
-    val options = if (normalizedTent == "veg") vegOptions else fodderOptions
-
-    // ---- Persistence ----
-    val ctx = LocalContext.current
-    val prefs = remember(ctx) { Prefs(ctx) }
-    val savedVeg by prefs.selectedVeg.collectAsState(initial = emptyList())
-    val savedFodder by prefs.selectedFodder.collectAsState(initial = emptyList())
-    val saved = if (normalizedTent == "veg") savedVeg else savedFodder
+    val context = LocalContext.current
+    val prefs = remember(context) { Prefs(context) }   // ✅ fix: use LocalContext outside remember {}
     val scope = rememberCoroutineScope()
 
-    var selected by rememberSaveable(normalizedTent) { mutableStateOf(saved) }
-    LaunchedEffect(saved) { selected = saved }
+    // Load previously saved selections
+    val savedFodder by prefs.selectedFodder.collectAsState(initial = emptyList())
+    val savedVeg by prefs.selectedVeg.collectAsState(initial = emptyList())
 
-    // ---- High-contrast swatches for groups ----
-    val groupSwatches = listOf(
-        Color(0xFF7E57C2), // 1: Purple
-        Color(0xFF42A5F5), // 2: Blue
-        Color(0xFF26A69A), // 3: Teal
-        Color(0xFFFFB300), // 4: Amber
-        Color(0xFFEF5350), // 5: Red (spare)
-        Color(0xFF66BB6A)  // 6: Green (spare)
-    )
-    @Composable
-    fun chipColorsFor(group: Int, isSelected: Boolean): SelectableChipColors {
-        val base = groupSwatches[(group - 1).coerceAtLeast(0) % groupSwatches.size]
-        val container = if (isSelected) base else base.copy(alpha = 0.18f)
-        val label = if (isSelected) Color.White else base
-        return FilterChipDefaults.filterChipColors(
-            containerColor = container,
-            labelColor = label,
-            selectedContainerColor = base,
-            selectedLabelColor = Color.White,
-            iconColor = label,
-            selectedLeadingIconColor = Color.White
-        )
-    }
+    val initial = if (tent == "veg") savedVeg else savedFodder
+    val selected = remember(tent, initial) { mutableStateListOf<String>().apply { addAll(initial) } }
+
+    val snack = remember { SnackbarHostState() }
+    var isSaving by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    TextButton(
-                        onClick = { scope.launch { prefs.saveSelectedCrops(normalizedTent, selected) } },
-                        enabled = selected.isNotEmpty()
-                    ) { Text("Save") }
-                }
+                title = { Text("Crop Planner – " + if (tent == "veg") "Vegetables" else "Fodder") },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, null) } }
             )
+        },
+        containerColor = Color.Transparent,
+        snackbarHost = { SnackbarHost(snack) },
+        bottomBar = {
+            // Big sticky Save button
+            Surface(color = Color.Transparent) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            if (!isSaving) {
+                                isSaving = true
+                                scope.launch {
+                                    prefs.saveSelectedCrops(tent = tent, crops = selected.toList())
+                                    snack.showSnackbar("Saved ${selected.size} crop${if (selected.size == 1) "" else "s"}")
+                                    isSaving = false
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = MaterialTheme.shapes.extraLarge
+                    ) {
+                        Text(if (isSaving) "Saving…" else "Save", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
         }
     ) { pads ->
         Column(
-            modifier = Modifier
+            Modifier
                 .padding(pads)
-                .fillMaxSize()
-                .padding(16.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Theme-aware heading
             Text(
-                text = "Pick the crops you plan to grow",
+                "Pick the crops you plan to grow",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                color = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) Color.Black else Color.White
             )
 
-            // Grid = cleaner, less clutter
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 150.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f, fill = false)
-            ) {
-                items(options, key = { it.name }) { opt ->
-                    val isSelected = opt.name in selected
-                    val swatch = groupSwatches[(opt.group - 1) % groupSwatches.size]
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = {
-                            selected = if (isSelected) selected - opt.name else selected + opt.name
-                        },
-                        label = { Text(opt.name) },
-                        colors = chipColorsFor(opt.group, isSelected),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = swatch.copy(0.40f),
-                            selectedBorderColor = Color.White // pop on dark
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            }
+            if (tent == "veg") VegGroups(selected) else FodderGroups(selected)
 
-            if (selected.isNotEmpty()) {
-                ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    elevation = CardDefaults.elevatedCardElevation(3.dp)
-                ) {
-                    Column(Modifier.padding(16.dp)) {
-                        Text(
-                            "Selected (${selected.size})",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(selected.sorted().joinToString(", "))
-                    }
-                }
-            }
-
-            // One clear tip replacing compatibility paragraphs
-            TipsCard(
-                title = "Tip",
+            TipCard(
                 lines = listOf(
-                    "Same-colour crops grow well together.",
-                    "You can mix colours too—just keep EC, pH and light suitable for all."
+                    "Crops with the same color can grow together.",
+                    "Pick what you want — Save to keep your choices."
                 )
             )
 
-            val settings = if (normalizedTent == "veg")
-                "Leafy veg: EC 0.8–1.6 • pH 5.8–6.2 • Temp 20–26°C • RH 55–70%."
-            else
-                "Fodder: EC 0.4–1.0 • pH 5.8–6.2 • Temp 18–24°C • short, frequent pumps."
-            TipsCard(title = "Target settings", lines = listOf(settings))
+            Spacer(Modifier.height(80.dp)) // room above bottom bar
+        }
+    }
+}
+
+/* ------------------------- Chip colors + UI ------------------------- */
+
+private val Mint   = Color(0xFF28B487) // green group
+private val Blue   = Color(0xFF2E86DE) // blue group
+private val Violet = Color(0xFF7E57C2) // violet group
+private val Amber  = Color(0xFFF39C12) // amber group
+
+@Composable
+private fun SRChoiceChip(
+    text: String,
+    selected: Boolean,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    val c = MaterialTheme.colorScheme
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(text) },
+        colors = FilterChipDefaults.filterChipColors(
+            containerColor = c.surface.copy(alpha = 0.72f),
+            labelColor = c.onSurface,
+            selectedContainerColor = tint.copy(alpha = 0.92f),
+            selectedLabelColor = Color.White
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = if (selected) tint.copy(alpha = 0f) else tint.copy(alpha = 0.70f),
+            selectedBorderColor = tint.copy(alpha = 0f),
+            disabledSelectedBorderColor = tint.copy(alpha = 0f)
+        )
+    )
+}
+
+/* ------------------------- VEG groups ------------------------- */
+
+@Composable
+private fun VegGroups(selected: MutableList<String>) {
+    GroupBlock("Leafy (mint)") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Lettuce", "Spinach", "Kale", "Swiss chard").forEach { name ->
+                val sel = name in selected
+                SRChoiceChip(name, sel, Mint) { if (sel) selected.remove(name) else selected.add(name) }
+            }
+        }
+    }
+    GroupBlock("Herbs (amber)") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Basil", "Coriander", "Parsley", "Mint").forEach { name ->
+                val sel = name in selected
+                SRChoiceChip(name, sel, Amber) { if (sel) selected.remove(name) else selected.add(name) }
+            }
+        }
+    }
+    GroupBlock("Fruiting (violet)") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Tomato (hydro)", "Cucumber (hydro)", "Pepper (hydro)").forEach { name ->
+                val sel = name in selected
+                SRChoiceChip(name, sel, Violet) { if (sel) selected.remove(name) else selected.add(name) }
+            }
+        }
+    }
+}
+
+/* ------------------------- FODDER groups ------------------------- */
+
+@Composable
+private fun FodderGroups(selected: MutableList<String>) {
+    GroupBlock("Barley & Wheat (mint)") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Barley fodder", "Wheat fodder").forEach { name ->
+                val sel = name in selected
+                SRChoiceChip(name, sel, Mint) { if (sel) selected.remove(name) else selected.add(name) }
+            }
+        }
+    }
+    GroupBlock("Oats & Sorghum (blue)") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Oats fodder", "Sorghum fodder").forEach { name ->
+                val sel = name in selected
+                SRChoiceChip(name, sel, Blue) { if (sel) selected.remove(name) else selected.add(name) }
+            }
+        }
+    }
+    GroupBlock("Sunflower & Lucerne (violet)") {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("Sunflower fodder", "Lucerne/Alfalfa fodder").forEach { name ->
+                val sel = name in selected
+                SRChoiceChip(name, sel, Violet) { if (sel) selected.remove(name) else selected.add(name) }
+            }
+        }
+    }
+}
+
+/* ------------------------- Small blocks ------------------------- */
+
+@Composable
+private fun GroupBlock(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) Color.Black else Color.White
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { content() }
+    }
+}
+
+@Composable
+private fun TipCard(
+    title: String = "Color matches",             // ✅ default to silence lint
+    lines: List<String>
+) {
+    val (bg, fg) = overlayColors()
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        elevation = CardDefaults.elevatedCardElevation(3.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = bg,
+            contentColor   = fg
+        )
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = fg)
+            lines.forEach { Text("• $it", style = MaterialTheme.typography.bodyMedium, color = fg) }
         }
     }
 }

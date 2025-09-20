@@ -9,18 +9,21 @@ import com.keagan.smartroots.data.Prefs
 import com.keagan.smartroots.model.AppState
 import com.keagan.smartroots.nav.SmartRootsNavGraph
 import com.keagan.smartroots.ui.theme.SmartRootsTheme
+import com.keagan.smartroots.ui.AppBackdrop   // <<— IMPORTANT import
 
 @Composable
 fun SmartRootsApp(prefs: Prefs) {
-    val appState = remember { AppState() }                     // ✅ single shared state
+    val appState = remember { AppState() }
     val light by prefs.themeIsLight.collectAsState(initial = false)
 
     SmartRootsTheme(light = light) {
         val nav = rememberNavController()
-        SmartRootsNavGraph(
-            nav = nav,
-            prefs = prefs,
-            app = appState                                     // ✅ pass into graph
-        )
+        AppBackdrop(lightMode = light) {
+            SmartRootsNavGraph(
+                nav = nav,
+                prefs = prefs,
+                app = appState
+            )
+        }
     }
 }

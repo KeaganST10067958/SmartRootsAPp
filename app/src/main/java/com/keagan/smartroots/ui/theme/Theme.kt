@@ -6,48 +6,30 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-// ---------------- Dark (new leaf palette) ----------------
-private val DarkColors = darkColorScheme(
-    primary = LeafGreen,            // buttons, active chips
-    onPrimary = OnDarkHigh,         // text/icons on primary
-
-    secondary = LeafChartreuse,     // accents (status, small highlights)
-    onSecondary = LeafNight,
-
-    tertiary = LeafForest,          // "warning-ish" accent we use for Low/High state
-    onTertiary = OnDarkHigh,
-
-    background = LeafNight,         // app background
-    onBackground = OnDarkHigh,
-
-    surface = Color(0xFF0A1A0A),    // slightly lighter than background
-    onSurface = OnDarkHigh,
-
-    surfaceVariant = Color(0xFF0E2010),
-    onSurfaceVariant = OnDarkMed,
-
-    outline = OutlineDark
-    // error / errorContainer left default from M3
+private val LightColors = lightColorScheme(
+    primary = SO_Primary_L,   onPrimary = Color.White,
+    secondary = SO_Secondary_L, onSecondary = Color.White,
+    tertiary = SO_Tertiary_L, onTertiary = Color.White,
+    background = SO_Bg_L, onBackground = SO_OnSurf_L,
+    surface = SO_Surf_L, onSurface = SO_OnSurf_L,
+    surfaceVariant = SO_SurfVar_L, onSurfaceVariant = SO_OnSurf_L.copy(alpha = 0.80f),
+    outline = SO_OnSurf_L.copy(alpha = 0.20f)
 )
 
-// ---------------- Light (unchanged from your current look) ----------------
-private val LightPastelColors = lightColorScheme(
-    primary = Color(0xFF7BE3B3), // pastel mint
-    secondary = Color(0xFF79C7FF), // pastel blue
-    background = Color(0xFFF7FBF8),
-    surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFF4FAF7),
-    onPrimary = Color(0xFF08361B),
-    onSecondary = Color(0xFF16321F),
-    onBackground = Color(0xFF16321F),
-    onSurface = Color(0xFF16321F)
+private val DarkColors = darkColorScheme(
+    primary = SO_Primary_D,   onPrimary = Color(0xFF0C130F),
+    secondary = SO_Secondary_D, onSecondary = Color(0xFF120C08),
+    tertiary = SO_Tertiary_D, onTertiary = Color(0xFF0E0C16),
+    background = SO_Bg_D, onBackground = SO_OnSurf_D,
+    surface = SO_Surf_D, onSurface = SO_OnSurf_D,
+    surfaceVariant = SO_SurfVar_D, onSurfaceVariant = SO_OnSurf_D.copy(alpha = 0.85f),
+    outline = SO_OnSurf_D.copy(alpha = 0.24f)
 )
 
 @Composable
 fun SmartRootsTheme(light: Boolean, content: @Composable () -> Unit) {
-    val colors = if (light) LightPastelColors else DarkColors
     MaterialTheme(
-        colorScheme = colors,
+        colorScheme = if (light) LightColors else DarkColors,
         typography = androidx.compose.material3.Typography(),
         content = content
     )
