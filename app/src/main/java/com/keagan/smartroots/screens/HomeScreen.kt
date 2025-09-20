@@ -44,6 +44,7 @@ fun HomeScreen(
         Metric("ph", R.string.soil_ph, R.string.tip_ph, "pH", 5.2f, 7.2f, 5.8f..6.5f, Icons.Rounded.Science),
         Metric("ec", R.string.ec, R.string.tip_ec, "mS/cm", 0.2f, 2.5f, 0.4f..1.5f, Icons.Rounded.Bolt),
         Metric("water", R.string.water_level, R.string.tip_water, "%", 20f, 100f, 40f..100f, Icons.Rounded.WaterDrop),
+        Metric("harvest", R.string.harvest, R.string.tip_harvest, "", 0f, 0f, null, Icons.Rounded.Spa),
         Metric("notes", R.string.notes, R.string.tip_notes, "", 0f, 0f, null, Icons.AutoMirrored.Rounded.Notes),
         Metric("camera", R.string.camera, R.string.tip_camera, "", 0f, 0f, null, Icons.Rounded.CameraAlt),
     )
@@ -56,7 +57,6 @@ fun HomeScreen(
     )
 
     val extra = listOf(
-        Metric("harvest", R.string.harvest, R.string.tip_harvest, "", 0f, 0f, null, Icons.Rounded.Spa),
         Metric("planner", R.string.crop_planner, R.string.tip_crop_planner, "", 0f, 0f, null, Icons.Rounded.List)
     )
 

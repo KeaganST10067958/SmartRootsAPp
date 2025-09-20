@@ -21,53 +21,33 @@ import kotlinx.coroutines.launch
 @Composable
 fun SplashScreen(
     prefs: Prefs,
-    onSelectMode: (String) -> Unit // "veg" | "fodder"
+    onSelectMode: (String) -> Unit // "veg" | "fodder" | "planner_fodder" | "planner_veg" | "harvest"
 ) {
     val scope = rememberCoroutineScope()
     val light by prefs.themeIsLight.collectAsState(initial = false)
     val langTag by prefs.languageTag.collectAsState(initial = "en")
-
     var logoVisible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { logoVisible = true }
 
-    Surface(
-        modifier = Modifier.fillMaxSize().systemBarsPadding(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Surface(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 20.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // --- Logo (PNG in res/drawable/ic_logo.png) ---
-            AnimatedVisibility(
-                visible = logoVisible,
-                enter = fadeIn(animationSpec = tween(700))
-            ) {
+            AnimatedVisibility(visible = logoVisible, enter = fadeIn(animationSpec = tween(700))) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_logo),
                     contentDescription = null,
                     modifier = Modifier.size(120.dp),
-                    tint = Color.Unspecified // keep PNG colors
+                    tint = Color.Unspecified
                 )
             }
-
             Spacer(Modifier.height(8.dp))
-            Text(
-                text = "SmartRoots",
-                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-            )
-            Text(
-                text = "Hydroponics made simple",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-            )
-
+            Text("SmartRoots", style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+            Text("Hydroponics made simple", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
             Spacer(Modifier.height(24.dp))
 
-            // --- Theme toggle ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -80,16 +60,11 @@ fun SplashScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (light) "Light" else "Dark")
                     Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = light,
-                        onCheckedChange = { checked -> scope.launch { prefs.setThemeLight(checked) } }
-                    )
+                    Switch(checked = light, onCheckedChange = { checked -> scope.launch { prefs.setThemeLight(checked) } })
                 }
             }
 
             Spacer(Modifier.height(12.dp))
-
-            // --- Language (simple display; wire up your dropdown if you want) ---
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,22 +74,22 @@ fun SplashScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Language", fontWeight = FontWeight.SemiBold)
-                Text(
-                    langTag.uppercase(),
-                    modifier = Modifier.clickable { /* open picker if you have one */ }.padding(8.dp)
-                )
+                Text(langTag.uppercase(), modifier = Modifier.clickable { },)
             }
 
             Spacer(Modifier.height(24.dp))
-
-            // --- Mode buttons ---
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(onClick = { onSelectMode("veg") }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Vegetables")
-                }
-                OutlinedButton(onClick = { onSelectMode("fodder") }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Fodder")
-                }
+                Button(onClick = { onSelectMode("veg") }, modifier = Modifier.fillMaxWidth()) { Text("Vegetables") }
+                OutlinedButton(onClick = { onSelectMode("fodder") }, modifier = Modifier.fillMaxWidth()) { Text("Fodder") }
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Text("Plan & track", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedButton(onClick = { onSelectMode("planner_fodder") }, modifier = Modifier.fillMaxWidth()) { Text("Fodder Planner") }
+                OutlinedButton(onClick = { onSelectMode("planner_veg") }, modifier = Modifier.fillMaxWidth()) { Text("Veg Planner") }
+                OutlinedButton(onClick = { onSelectMode("harvest") }, modifier = Modifier.fillMaxWidth()) { Text("Harvest Tracker") }
             }
         }
     }

@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -31,14 +33,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import com.keagan.smartroots.components.PillSwitch
+import com.keagan.smartroots.data.Prefs
+import com.keagan.smartroots.model.Note
 import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.random.Random
+import kotlinx.coroutines.launch
 
-// ---- Status colors (same mapping as tiles) ----
-private val DangerRed         = Color(0xFFD32F2F) // High
-private val WarningOrange     = Color(0xFFFFA000) // Low / middle warning
-private val SuccessLightGreen = Color(0xFF8BC34A) // Ideal
+// ---- Status colors for numbers / chips ----
+private val DangerRed         = Color(0xFFD32F2F)
+private val WarningOrange     = Color(0xFFFFA000)
+private val SuccessLightGreen = Color(0xFF8BC34A)
 
 private fun colorForStatus(label: String, scheme: ColorScheme): Color = when (label) {
     "High"  -> DangerRed
@@ -77,7 +84,7 @@ fun DetailScreen(
             when (metricKey) {
                 "fan" -> FanPanel()
                 "irrigation" -> IrrigationPanel()
-                "mold" -> MoldPanel()          // Mould Watch first
+                "mold" -> MoldPanel()
                 "notes" -> NotesPanelFancy()
                 "camera" -> CameraPanel(context)
                 else -> SensorPanel(metricKey)
@@ -89,37 +96,24 @@ fun DetailScreen(
 /* ---------------------------- Reusable UI ------------------------------ */
 
 @Composable
-private fun BigToggleTile(
+private fun BigTile(
     title: String,
     subtitle: String? = null,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
+    content: @Composable ColumnScope.() -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 120.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.extraLarge,
-        elevation = CardDefaults.elevatedCardElevation(4.dp)
+        elevation = CardDefaults.elevatedCardElevation(3.dp)
     ) {
-        Row(
-            Modifier
-                .padding(18.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                if (!subtitle.isNullOrBlank()) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+        Column(Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            if (!subtitle.isNullOrBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(checked = checked, onCheckedChange = onCheckedChange)
+            Spacer(Modifier.height(8.dp))
+            content()
         }
     }
 }
@@ -188,56 +182,50 @@ private fun SensorPanel(metricKey: String) {
         label = spec.label,
         valueText = value.roundToInt().toString(),
         unit = spec.unit,
-        valueColor = statusColor,                     // ✅ color the number
-        statusChip = {
-            StatusPill(statusText, statusColor)       // ✅ chip matches
-        }
+        valueColor = statusColor,
+        statusChip = { StatusPill(statusText, statusColor) }
     )
-
-    if (metricKey == "humidity" || metricKey == "temperature") {
-        var fanOn by remember { mutableStateOf(false) }
-        Spacer(Modifier.height(12.dp))
-        BigToggleTile(
-            title = "Fan",
-            subtitle = "This controls the tent fan",
-            checked = fanOn,
-            onCheckedChange = { fanOn = it }
-        )
-    }
-
-    Spacer(Modifier.height(12.dp))
 
     SRSectionCard(title = "Last 24 readings", subtitle = "Live feed (simulated)") {
         Sparkline(series)
         Spacer(Modifier.height(8.dp))
         Row {
-            InfoStat("Min", "${series.minOrNull()?.prettyInt() ?: "--"} ${spec.unit}")
-            InfoStat("Max", "${series.maxOrNull()?.prettyInt() ?: "--"} ${spec.unit}")
+            InfoStat("Min", "${series.minOrNull()?.roundToInt() ?: "--"} ${spec.unit}")
+            InfoStat("Max", "${series.maxOrNull()?.roundToInt() ?: "--"} ${spec.unit}")
             spec.ideal?.let { ideal ->
                 InfoStat("Ideal", "${ideal.start.roundToInt()}–${ideal.endInclusive.roundToInt()} ${spec.unit}")
             }
         }
     }
 
-    Spacer(Modifier.height(12.dp))
+    // Extra fan control on Humidity/Temperature pages
+    if (metricKey == "humidity" || metricKey == "temperature") {
+        Spacer(Modifier.height(12.dp))
+        var fanOn by remember { mutableStateOf(false) }
+        BigTile(title = "Fan", subtitle = "This controls the tent fan") {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                PillSwitch(checked = fanOn, onCheckedChange = { fanOn = it })
+            }
+        }
+    }
 
+    // Tips
     val tips = when (metricKey) {
-        "humidity" -> buildList {
-            when {
-                value > 80 -> add("Humidity high: increase airflow; shorten pump duration.")
-                value < 50 -> add("Humidity low: consider slightly longer/closer pump cycles.")
-                else -> add("Humidity within ideal range.")
-            }
-            add("Keep gentle airflow across canopy; avoid pooling water.")
-        }
-        "temperature" -> buildList {
-            when {
-                value > 30 -> add("Temp high: increase ventilation; consider shade/cooler intake.")
-                value < 18 -> add("Temp low: reduce drafts; insulate base of tent/trays.")
-                else -> add("Temperature within ideal range.")
-            }
-            add("Check pump timing; warmer rooms evaporate faster.")
-        }
+        "humidity" -> listOf(
+            if (statusText == "High") "Humidity high: increase airflow; shorten pump duration."
+            else if (statusText == "Low") "Humidity low: consider slightly longer/closer pump cycles."
+            else "Humidity within ideal range.",
+            "Keep gentle airflow across canopy; avoid pooling water."
+        )
+        "temperature" -> listOf(
+            if (statusText == "High") "Temp high: increase ventilation; consider shade/cooler intake."
+            else if (statusText == "Low") "Temp low: reduce drafts; insulate base of tent/trays."
+            else "Temperature within ideal range.",
+            "Check pump timing; warmer rooms evaporate faster."
+        )
         "ph" -> listOf(
             "If pH < 5.8 (acidic): add pH-Up in small increments; re-measure.",
             "If pH > 6.5 (alkaline): add pH-Down; re-measure.",
@@ -245,12 +233,14 @@ private fun SensorPanel(metricKey: String) {
         )
         "ec" -> listOf(
             "Low EC: increase nutrient concentration gradually; avoid big jumps.",
-            "High EC: dilute reservoir with clean water, then re-check.",
-            "Match EC to crop stage; seedlings prefer weaker solution."
+            "High EC: dilute reservoir with clean water, then re-check."
         )
         else -> emptyList()
     }
-    if (tips.isNotEmpty()) TipsCard(lines = tips)
+    if (tips.isNotEmpty()) {
+        Spacer(Modifier.height(12.dp))
+        TipsCard(lines = tips)
+    }
 }
 
 /* ------------------------------ Fan panel ------------------------------ */
@@ -258,15 +248,21 @@ private fun SensorPanel(metricKey: String) {
 @Composable
 private fun FanPanel() {
     var fanOn by remember { mutableStateOf(false) }
-    BigToggleTile(
-        title = "Circulation Fan",
-        subtitle = "This controls the tent fan",
-        checked = fanOn,
-        onCheckedChange = { fanOn = it }
+    ValueHeader(
+        icon = Icons.Rounded.Air,
+        label = "Circulation Fan",
+        valueText = if (fanOn) "ON" else "OFF",
+        valueColor = if (fanOn) SuccessLightGreen else MaterialTheme.colorScheme.onSurfaceVariant
     )
+    BigTile(title = "Fan", subtitle = "This controls the tent fan") {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            PillSwitch(checked = fanOn, onCheckedChange = { fanOn = it })
+        }
+    }
     Spacer(Modifier.height(12.dp))
     TipsCard(lines = listOf(
-        if (fanOn) "Fan is ON; airflow reduces mould risk." else "Turn fan ON after irrigation or when humidity is high.",
+        if (fanOn) "Fan is ON; airflow reduces mould risk."
+        else "Turn fan ON after irrigation or when humidity is high.",
         "Aim airflow across the canopy, not directly at seedlings."
     ))
 }
@@ -275,27 +271,34 @@ private fun FanPanel() {
 
 @Composable
 private fun IrrigationPanel() {
-    var pumpAuto by remember { mutableStateOf(true) }
     var pumpOn by remember { mutableStateOf(false) }
 
-    BigToggleTile(
-        title = "Pump",
-        subtitle = "Toggle to run pump (simulated)",
-        checked = pumpOn,
-        onCheckedChange = { pumpOn = it }
+    ValueHeader(
+        icon = Icons.Rounded.WaterDrop,
+        label = "Pump",
+        valueText = if (pumpOn) "ON" else "OFF",
+        valueColor = if (pumpOn) SuccessLightGreen else MaterialTheme.colorScheme.onSurfaceVariant
     )
+
+    // Main tile with the pill at the bottom (no schedule toggle)
+    BigTile(title = "Pump", subtitle = "Toggle to run pump (simulated)") {
+        Spacer(Modifier.height(4.dp))
+        // … any quick info above the switch if you want
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            PillSwitch(checked = pumpOn, onCheckedChange = { pumpOn = it })
+        }
+    }
+
     Spacer(Modifier.height(12.dp))
 
+    // Schedule info only (no switch)
     SRSectionCard("Schedule (info)") {
         Text("Duration: 15 s")
         Text("Every: 2 h (active 06:00–20:00)")
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 8.dp)) {
-            Text("Auto schedule", modifier = Modifier.weight(1f))
-            Switch(checked = pumpAuto, onCheckedChange = { pumpAuto = it })
-        }
     }
-    Spacer(Modifier.height(12.dp))
 
+    Spacer(Modifier.height(12.dp))
     TipsCard(lines = listOf(
         "Short, frequent cycles keep mats moist without pooling.",
         "Increase interval if you see mould or standing water.",
@@ -319,24 +322,23 @@ private fun MoldPanel() {
         else -> "OK" to SuccessLightGreen
     }
 
-    // Mould Watch FIRST
+    // Mould Watch first
     ValueHeader(
         icon = Icons.Rounded.Warning,
         label = "Mould Watch",
         valueText = mri.roundToInt().toString(),
         unit = "MRI",
-        valueColor = color,                 // ✅ number colored
+        valueColor = color,
         statusChip = { StatusPill(label, color) }
     )
-    Spacer(Modifier.height(12.dp))
 
-    // Fan toggle BELOW
-    BigToggleTile(
-        title = "Fan",
-        subtitle = "This controls the tent fan",
-        checked = fanOn,
-        onCheckedChange = { fanOn = it }
-    )
+    // Fan tile under it with pill at the bottom
+    BigTile(title = "Fan", subtitle = "This controls the tent fan") {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            PillSwitch(checked = fanOn, onCheckedChange = { fanOn = it })
+        }
+    }
+
     Spacer(Modifier.height(12.dp))
 
     SRSectionCard("Current conditions") {
@@ -346,19 +348,17 @@ private fun MoldPanel() {
             InfoStat("Since irrigation", "${minutes.roundToInt()} min")
         }
     }
+
     Spacer(Modifier.height(12.dp))
 
     val recs = buildList {
         if (mri >= 67) {
-            add("Run fan continuously for 20–30 min after irrigation.")
+            add("Run fan 20–30 min after irrigation; increase airflow.")
             add("Reduce irrigation duration or increase interval.")
-            add("Aim humidity below 70%; increase canopy airflow.")
         } else if (mri >= 34) {
-            add("Add a 10-minute fan cycle after each irrigation.")
+            add("Add a 10-minute fan cycle after irrigation.")
             add("Avoid standing water on trays; improve drain-off.")
-        } else {
-            add("Conditions are good. Keep steady airflow across mats.")
-        }
+        } else add("Conditions are good. Keep steady airflow across mats.")
     }
     TipsCard(title = "Recommended adjustments", lines = recs)
 }
@@ -367,47 +367,129 @@ private fun MoldPanel() {
 
 @Composable
 private fun NotesPanelFancy() {
-    var text by remember { mutableStateOf("") }
+    val ctx = LocalContext.current
+    val prefs = remember { Prefs(ctx) }
+    val scope = rememberCoroutineScope()
+    val notes by prefs.notes.collectAsState(initial = emptyList())
+
+    var title by remember { mutableStateOf("") }
+    var body by remember { mutableStateOf("") }
+    var images by remember { mutableStateOf<List<Uri>>(emptyList()) }
+
+    val takePicture = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bmp ->
+        // Save preview to MediaStore? For simplicity, skip persistence for the preview
+        // Here we just ignore if null; you can extend saving later.
+    }
+
+    val pickImage = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia()
+    ) { uris -> images = uris ?: emptyList() }
+
     ValueHeader(
         icon = Icons.AutoMirrored.Rounded.Notes,
         label = "Notes",
         valueText = "Open"
     )
-    SRSectionCard("Write a note") {
+
+    BigTile(title = "Write a note") {
         OutlinedTextField(
-            value = text,
-            onValueChange = { text = it },
+            value = title, onValueChange = { title = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Title") }
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = body, onValueChange = { body = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 160.dp),
-            placeholder = { Text("Type here…") }
+                .heightIn(min = 120.dp),
+            placeholder = { Text("Type here…") },
+            label = { Text("Body") }
         )
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { takePicture.launch(null) }) { Text("Take picture") }
+            OutlinedButton(onClick = {
+                pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) { Text("Add picture") }
+        }
         Spacer(Modifier.height(12.dp))
-        Button(onClick = { /* save locally if you want */ }, modifier = Modifier.align(Alignment.End)) {
-            Text("Save")
+        Button(
+            onClick = {
+                scope.launch {
+                    prefs.addNote(title.trim(), body.trim(), images.map { it.toString() })
+                    title = ""; body = ""; images = emptyList()
+                }
+            },
+            modifier = Modifier.align(Alignment.End)
+        ) { Text("Save") }
+    }
+
+    Spacer(Modifier.height(12.dp))
+
+    if (notes.isNotEmpty()) {
+        Text("Saved notes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Spacer(Modifier.height(8.dp))
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(notes.sortedByDescending { it.createdAt }) { note ->
+                NoteItem(note = note, onDelete = { id ->
+                    scope.launch { prefs.deleteNote(id) }
+                })
+            }
+        }
+    } else {
+        TipsCard(lines = listOf(
+            "Use notes to track changes (pump timing, nutrients, cleaning).",
+            "Attach images of tray progress for quick visual comparisons."
+        ))
+    }
+}
+
+@Composable
+private fun NoteItem(note: Note, onDelete: (String) -> Unit) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        elevation = CardDefaults.elevatedCardElevation(2.dp)
+    ) {
+        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            val thumb = note.imageUris.firstOrNull()
+            if (thumb != null) {
+                AsyncImage(
+                    model = thumb,
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp).background(
+                        MaterialTheme.colorScheme.surfaceVariant, CircleShape
+                    )
+                )
+                Spacer(Modifier.width(12.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text(note.title.ifBlank { "Untitled" }, fontWeight = FontWeight.SemiBold)
+                Text(
+                    if (note.body.isBlank()) "—" else note.body.lines().first(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(onClick = { onDelete(note.id) }) {
+                Icon(Icons.Rounded.Delete, contentDescription = "Delete")
+            }
         }
     }
-    Spacer(Modifier.height(12.dp))
-    TipsCard(lines = listOf(
-        "Use notes to track changes (pump timing, nutrients, cleaning).",
-        "Attach images of tray progress for quick visual comparisons."
-    ))
 }
 
 /* ------------------------------ Camera panel --------------------------- */
 
 @Composable
 private fun CameraPanel(context: Context) {
-    var pickedUri by remember { mutableStateOf<Uri?>(null) }
-    var captured by remember { mutableStateOf<Bitmap?>(null) }
-
-    val galleryPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri -> pickedUri = uri }
-
-    val cameraLauncher = rememberLauncherForActivityResult(
+    // Scanner
+    val scanLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicturePreview()
-    ) { bmp -> captured = bmp }
+    ) { /* TODO: feed to AI later */ }
 
     ValueHeader(
         icon = Icons.Rounded.CameraAlt,
@@ -415,33 +497,26 @@ private fun CameraPanel(context: Context) {
         valueText = "Open"
     )
 
-    SRSectionCard("Capture") {
+    BigTile(title = "Capture") {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { cameraLauncher.launch(null) }) { Text("Take picture") }
-            OutlinedButton(onClick = {
-                galleryPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }) { Text("Pick from gallery") }
-            OutlinedButton(onClick = {
-                // TODO: wire to your live stream Activity/URL
-            }) { Text("Open live feed") }
+            Button(onClick = { scanLauncher.launch(null) }) { Text("Plant scanner") }
+            // Live with red dot
+            OutlinedButton(onClick = { /* open live feed screen */ }) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(DangerRed, CircleShape)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Live")
+            }
         }
-        captured?.let {
-            Spacer(Modifier.height(12.dp))
-            Image(
-                bitmap = it.asImageBitmap(),
-                contentDescription = "Captured",
-                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp)
-            )
-        }
-        pickedUri?.let { uri ->
-            Spacer(Modifier.height(12.dp))
-            val bmp = remember(uri) { loadBitmap(context, uri) }
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = "Selected",
-                modifier = Modifier.fillMaxWidth().heightIn(min = 220.dp)
-            )
-        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Used to check plant health or disease.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
@@ -478,8 +553,6 @@ private fun computeMoldRiskIndex(
     val raw = 0.4f * humidityScore + 0.3f * tempScore + 0.3f * wetScore
     return ((raw + airflowPenalty) * 100f).coerceIn(0f, 100f)
 }
-
-private fun Float.prettyInt(): String = this.roundToInt().toString()
 
 /* -------------------------- Embedded UI kit --------------------------- */
 
@@ -519,7 +592,7 @@ private fun ValueHeader(
     valueText: String,
     modifier: Modifier = Modifier,
     unit: String = "",
-    valueColor: Color? = null,                 // ✅ NEW: optional color for the number
+    valueColor: Color? = null,
     statusChip: @Composable (() -> Unit)? = null,
     gradient: Brush? = null
 ) {
@@ -529,46 +602,30 @@ private fun ValueHeader(
             MaterialTheme.colorScheme.primary.copy(0.05f)
         )
     )
-
-    Surface(
-        shape = MaterialTheme.shapes.extraLarge,
-        tonalElevation = 2.dp,
-        modifier = modifier.fillMaxWidth()
-    ) {
+    Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 2.dp, modifier = modifier.fillMaxWidth()) {
         Box(Modifier.background(resolvedGradient).padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier
-                        .size(56.dp)
-                        .background(MaterialTheme.colorScheme.primary.copy(0.12f), CircleShape),
+                    Modifier.size(56.dp).background(MaterialTheme.colorScheme.primary.copy(0.12f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) { Icon(icon, null, tint = MaterialTheme.colorScheme.primary) }
 
                 Spacer(Modifier.width(16.dp))
 
                 Column(Modifier.weight(1f)) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(
                             valueText,
                             style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
-                            color = valueColor ?: MaterialTheme.colorScheme.onSurface // ✅ apply color
+                            color = valueColor ?: MaterialTheme.colorScheme.onSurface
                         )
                         if (unit.isNotBlank()) {
                             Spacer(Modifier.width(6.dp))
-                            Text(
-                                unit,
-                                style = MaterialTheme.typography.titleLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text(unit, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
-
                 statusChip?.invoke()
             }
         }
@@ -588,31 +645,22 @@ private fun StatusPill(text: String, color: Color) {
 }
 
 @Composable
-private fun Sparkline(
-    values: List<Float>,
-    modifier: Modifier = Modifier
-) {
+private fun Sparkline(values: List<Float>, modifier: Modifier = Modifier) {
     val stroke = MaterialTheme.colorScheme.primary
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-
     androidx.compose.foundation.Canvas(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(120.dp)
+        modifier = modifier.fillMaxWidth().height(120.dp)
     ) {
         val w = size.width
         val h = size.height
-
         for (i in 1..3) {
             val y = h * i / 4f
             drawLine(grid, start = Offset(0f, y), end = Offset(w, y), strokeWidth = 1f)
         }
-
         if (values.isEmpty()) return@Canvas
         val min = values.minOrNull() ?: 0f
         val max = values.maxOrNull() ?: 1f
         val stepX = if (values.size <= 1) w else w / (values.size - 1).toFloat()
-
         val path = Path()
         values.forEachIndexed { i, v ->
             val x = i * stepX

@@ -8,17 +8,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.keagan.smartroots.data.Prefs
 import com.keagan.smartroots.model.AppState
-import com.keagan.smartroots.screens.CropPlannerScreen
-import com.keagan.smartroots.screens.DetailScreen
-import com.keagan.smartroots.screens.HarvestScreen
-import com.keagan.smartroots.screens.HomeScreen
-import com.keagan.smartroots.screens.SplashScreen
-
+import com.keagan.smartroots.screens.*
+/*
+Existing routes in your project:
+- ROUTE_SPLASH = "splash"
+- ROUTE_HOME   = "home/{mode}"
+- ROUTE_DETAIL = "detail/{metric}"
+*/
 const val ROUTE_SPLASH = "splash"
-const val ROUTE_HOME = "home/{mode}"          // "veg" | "fodder"
+const val ROUTE_HOME = "home/{mode}"
 const val ROUTE_DETAIL = "detail/{metric}"
+
+// NEW:
+const val ROUTE_PLANNER = "planner/{tent}"   // "fodder" | "veg"
 const val ROUTE_HARVEST = "harvest"
-const val ROUTE_PLANNER = "planner/{mode}"
 
 @Composable
 fun SmartRootsNavGraph(
@@ -32,8 +35,15 @@ fun SmartRootsNavGraph(
             SplashScreen(
                 prefs = prefs,
                 onSelectMode = { mode ->
-                    nav.navigate("home/$mode") {
-                        popUpTo(ROUTE_SPLASH) { inclusive = true }
+                    when (mode) {
+                        "planner_fodder" -> nav.navigate("planner/fodder")
+                        "planner_veg" -> nav.navigate("planner/veg")
+                        "harvest" -> nav.navigate(ROUTE_HARVEST)
+                        else -> {
+                            nav.navigate("home/$mode") {
+                                popUpTo(ROUTE_SPLASH) { inclusive = true }
+                            }
+                        }
                     }
                 }
             )
@@ -52,13 +62,7 @@ fun SmartRootsNavGraph(
                         popUpTo(ROUTE_HOME) { inclusive = true }
                     }
                 },
-                onOpenMetric = { key ->
-                    when (key) {
-                        "harvest" -> nav.navigate(ROUTE_HARVEST)
-                        "planner" -> nav.navigate("planner/$mode")
-                        else -> nav.navigate("detail/$key")
-                    }
-                }
+                onOpenMetric = { key -> nav.navigate("detail/$key") }
             )
         }
 
@@ -67,24 +71,21 @@ fun SmartRootsNavGraph(
             arguments = listOf(navArgument("metric") { type = NavType.StringType })
         ) { backStackEntry ->
             val metric = backStackEntry.arguments?.getString("metric").orEmpty()
-            DetailScreen(
-                metricKey = metric,
-                onBack = { nav.popBackStack() }
-            )
+            DetailScreen(metricKey = metric, onBack = { nav.popBackStack() })
         }
 
-        composable(ROUTE_HARVEST) {
-            HarvestScreen(onBack = { nav.popBackStack() })
-        }
-
+        // NEW Planner
         composable(
             route = ROUTE_PLANNER,
-            arguments = listOf(navArgument("mode") { type = NavType.StringType })
-        ) { bse ->
-            CropPlannerScreen(
-                mode = bse.arguments?.getString("mode") ?: "veg",
-                onBack = { nav.popBackStack() }
-            )
+            arguments = listOf(navArgument("tent") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val tent = backStackEntry.arguments?.getString("tent") ?: "fodder"
+            PlannerScreen(tent = tent, onBack = { nav.popBackStack() })
+        }
+
+        // NEW Harvest
+        composable(ROUTE_HARVEST) {
+            HarvestScreen(onBack = { nav.popBackStack() })
         }
     }
 }
