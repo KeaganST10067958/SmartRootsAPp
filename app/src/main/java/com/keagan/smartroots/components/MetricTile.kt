@@ -19,10 +19,9 @@ import com.keagan.smartroots.model.Metric
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-// Color mapping for statuses
-private val DangerRed           = Color(0xFFD32F2F) // High
-private val WarningOrange       = Color(0xFFFFA000) // Low / mid warning
-private val SuccessLightGreen   = Color(0xFF8BC34A) // Ideal
+private val DangerRed         = Color(0xFFD32F2F)
+private val WarningOrange     = Color(0xFFFFA000)
+private val SuccessLightGreen = Color(0xFF66BB6A)
 
 private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (status) {
     "High"  -> DangerRed
@@ -33,10 +32,12 @@ private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (s
 
 @Composable
 fun MetricTile(metric: Metric, onClick: () -> Unit) {
-    // Mark tiles that open dedicated screens
     val special = setOf("mold", "fan", "irrigation", "notes", "camera", "light")
 
+    // Special tiles (navigate)
     if (metric.key in special) {
+        var lightOn by remember { mutableStateOf(false) }
+
         Surface(
             onClick = onClick,
             modifier = Modifier
@@ -58,27 +59,38 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                     Text(
                         text = stringResource(metric.titleRes),
                         style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = stringResource(metric.tipRes),
-                        style = MaterialTheme.typography.bodySmall, // ✅ fixed typo
-                        color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
+                        fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = stringResource(metric.tipRes),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
                 }
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
-                )
+
+                if (metric.key == "light") {
+                    // Inline on/off control (doesn't navigate)
+                    Spacer(Modifier.width(8.dp))
+                    PillSwitch(
+                        checked = lightOn,
+                        onCheckedChange = { lightOn = it }
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
+                    )
+                }
             }
         }
         return
     }
 
-    // ===== Common tiles (humidity, temperature, ph, ec, water) =====
+    // Common tiles with simulated reading
     var reading by remember { mutableStateOf<Float?>(null) }
     LaunchedEffect(metric.key) {
         while (true) {
@@ -100,7 +112,6 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
             else -> "Ideal"
         }
     }
-
     val scheme = MaterialTheme.colorScheme
     val statusColor = colorForStatus(statusLabel, scheme)
 
@@ -119,20 +130,15 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                 .padding(18.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon
             LeadingIcon(metric.icon)
-
             Spacer(Modifier.width(16.dp))
-
-            // Left: Title + Target range
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = stringResource(metric.titleRes),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                     Spacer(Modifier.width(8.dp))
                     Surface(
@@ -147,24 +153,17 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                         )
                     }
                 }
-
                 Text(
                     text = stringResource(metric.tipRes),
                     style = MaterialTheme.typography.bodySmall,
                     color = scheme.onSurface.copy(alpha = 0.70f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    maxLines = 1, overflow = TextOverflow.Ellipsis
                 )
             }
-
             Spacer(Modifier.width(12.dp))
-
-            // Right: number (colored by status)
             Text(
-                text = if (metric.unit.isEmpty() || reading == null)
-                    "—"
-                else
-                    "${reading!!.roundToInt()} ${metric.unit}",
+                text = if (metric.unit.isEmpty() || reading == null) "—"
+                else "${reading!!.roundToInt()} ${metric.unit}",
                 style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
                 color = statusColor
             )
