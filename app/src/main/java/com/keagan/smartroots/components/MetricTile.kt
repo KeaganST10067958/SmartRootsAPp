@@ -32,13 +32,14 @@ private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (s
 
 @Composable
 fun MetricTile(metric: Metric, onClick: () -> Unit) {
-    // Removed "light" so it navigates (no inline switch)
-    val special = setOf("mold", "fan", "irrigation", "notes", "camera")
+    val special = setOf("mold", "fan", "irrigation", "notes", "camera", "light")
 
-    // Special tiles (navigate)
+    // —— Special tiles (navigate), except "light" which contains an inline switch and does NOT navigate
     if (metric.key in special) {
+        var lightOn by remember { mutableStateOf(false) }
+
         Surface(
-            onClick = onClick,
+            onClick = if (metric.key == "light") ({}) else onClick, // no navigation for light
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 140.dp),
@@ -69,17 +70,26 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
-                Icon(
-                    imageVector = Icons.Rounded.ChevronRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
-                )
+
+                if (metric.key == "light") {
+                    Spacer(Modifier.width(8.dp))
+                    PillSwitch(
+                        checked = lightOn,
+                        onCheckedChange = { lightOn = it }
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
+                    )
+                }
             }
         }
         return
     }
 
-    // Common tiles with simulated reading
+    // —— Common sensor tiles (with simulated readings)
     var reading by remember { mutableStateOf<Float?>(null) }
     LaunchedEffect(metric.key) {
         while (true) {

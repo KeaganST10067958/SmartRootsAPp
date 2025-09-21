@@ -68,7 +68,7 @@ fun SplashScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize().systemBarsPadding(),
-        color = Color.Transparent      // keep global backdrop visible
+        color = Color.Transparent
     ) {
         Column(
             modifier = Modifier
@@ -77,7 +77,6 @@ fun SplashScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Logo
             AnimatedVisibility(visible = logoVisible, enter = fadeIn(animationSpec = tween(700))) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_logo),
@@ -103,12 +102,7 @@ fun SplashScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Theme row on a scrim
-            Surface(
-                color = scrimBg,
-                contentColor = scrimFg,
-                shape = MaterialTheme.shapes.medium
-            ) {
+            Surface(color = scrimBg, contentColor = scrimFg, shape = MaterialTheme.shapes.medium) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -130,12 +124,7 @@ fun SplashScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // Language row on a scrim
-            Surface(
-                color = scrimBg,
-                contentColor = scrimFg,
-                shape = MaterialTheme.shapes.medium
-            ) {
+            Surface(color = scrimBg, contentColor = scrimFg, shape = MaterialTheme.shapes.medium) {
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -144,33 +133,27 @@ fun SplashScreen(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text("Language", fontWeight = FontWeight.SemiBold, color = scrimFg)
-                    Text(langTag.uppercase(), color = scrimFg, modifier = Modifier.clickable { /* future: open language picker */ })
+                    Text(langTag.uppercase(), color = scrimFg, modifier = Modifier.clickable { })
                 }
             }
 
             Spacer(Modifier.height(20.dp))
 
-            // Primary actions (solid buttons)
             PrimaryActionButton(
                 text = "Vegetables",
                 onClick = { onSelectMode("veg") },
-                color = Color(0xFF2EBE7E) // Green
+                color = Color(0xFF2EBE7E)
             )
             Spacer(Modifier.height(14.dp))
             PrimaryActionButton(
                 text = "Fodder",
                 onClick = { onSelectMode("fodder") },
-                color = Color(0xFFF39C12) // Orange
+                color = Color(0xFFF39C12)
             )
 
             Spacer(Modifier.height(22.dp))
 
-            // Single “Plan & track” header (no duplicate chip)
-            Surface(
-                color = scrimBg,
-                contentColor = scrimFg,
-                shape = MaterialTheme.shapes.large
-            ) {
+            Surface(color = scrimBg, contentColor = scrimFg, shape = MaterialTheme.shapes.large) {
                 Text(
                     "Plan & track",
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
@@ -181,23 +164,22 @@ fun SplashScreen(
             }
 
             Spacer(Modifier.height(14.dp))
-
             PrimaryActionButton(
                 text = "Veg Planner",
                 onClick = { onSelectMode("planner_veg") },
-                color = Color(0xFF2EBE7E) // Green
+                color = Color(0xFF2EBE7E)
             )
             Spacer(Modifier.height(14.dp))
             PrimaryActionButton(
                 text = "Fodder Planner",
                 onClick = { onSelectMode("planner_fodder") },
-                color = Color(0xFFF39C12) // Orange
+                color = Color(0xFFF39C12)
             )
             Spacer(Modifier.height(14.dp))
             PrimaryActionButton(
                 text = "Harvest Tracker",
                 onClick = { onSelectMode("harvest") },
-                color = Color(0xFF5057D6) // Indigo
+                color = Color(0xFF2196F3) // BLUE now (light & dark)
             )
 
             Spacer(Modifier.height(12.dp))
