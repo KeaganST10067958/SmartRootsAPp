@@ -29,12 +29,13 @@ fun HomeScreen(
     val isVeg = mode == "veg"
     val title = if (isVeg) stringResource(R.string.vegetables) else stringResource(R.string.fodder)
 
-    // NOTE: Harvest tile removed here
     val common = listOf(
         Metric("humidity", R.string.humidity, R.string.tip_humidity, "%", 40f, 90f, 55f..75f, Icons.Rounded.WaterDrop),
-        Metric("temperature", R.string.temperature, R.string.tip_temperature, "°C", 16f, 34f, 20f..28f, Icons.Rounded.Thermostat),
-        Metric("ph", R.string.soil_ph, R.string.tip_ph, "pH", 5.2f, 7.2f, 5.8f..6.5f, Icons.Rounded.Science),
-        Metric("ec", R.string.ec, R.string.tip_ec, "mS/cm", 0.2f, 2.5f, 0.4f..1.5f, Icons.Rounded.Bolt),
+
+        // Short labels only on dashboard
+        Metric("temperature", R.string.temp_short, R.string.tip_temperature, "°C", 16f, 34f, 20f..28f, Icons.Rounded.Thermostat),
+        Metric("ec", R.string.em_short, R.string.tip_ec, "mS/cm", 0.2f, 2.5f, 0.4f..1.5f, Icons.Rounded.Bolt),
+
         Metric("water", R.string.water_level, R.string.tip_water, "%", 20f, 100f, 40f..100f, Icons.Rounded.WaterDrop),
         Metric("notes", R.string.notes, R.string.tip_notes, "", 0f, 0f, null, Icons.AutoMirrored.Rounded.Notes),
         Metric("camera", R.string.camera, R.string.tip_camera, "", 0f, 0f, null, Icons.Rounded.CameraAlt),
@@ -74,7 +75,7 @@ fun HomeScreen(
             items(metrics) { m ->
                 MetricTile(
                     metric = m,
-                    onClick = { onOpenMetric(m.key) } // no harvest branch anymore
+                    onClick = { onOpenMetric(m.key) }
                 )
             }
             item { Spacer(Modifier.height(12.dp)) }

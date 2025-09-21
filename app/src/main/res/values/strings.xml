@@ -17,6 +17,11 @@
     <!-- Common tiles (Home) -->
     <string name="humidity">Humidity</string>
     <string name="tip_humidity">Target 60–75% RH for healthy growth.</string>
+
+    <!-- NEW short labels for dashboard -->
+    <string name="temp_short">Temp</string>
+    <string name="em_short">EM</string>
+
     <string name="temperature">Temperature</string>
     <string name="tip_temperature">Ideal range 20–28°C (veg) or 18–24°C (fodder).</string>
     <string name="soil_ph">Soil pH</string>
@@ -51,14 +56,6 @@
     <!-- Pump -->
     <string name="irrigation">Pump</string>
     <string name="tip_irrigation">Pump schedule info and manual toggle.</string>
-
-    <!-- (Former schedule keys kept for compatibility; not shown in new UI) -->
-    <string name="interval_min">Interval (min)</string>
-    <string name="duration_sec">Duration (sec)</string>
-    <string name="last_irrigation_mins">Last irrigation: %1$d min ago</string>
-    <string name="irrigate_now">Irrigate now</string>
-    <string name="pause">Pause</string>
-    <string name="resume">Resume</string>
 
     <!-- New features -->
     <string name="harvest">Harvest</string>

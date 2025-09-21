@@ -32,12 +32,11 @@ private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (s
 
 @Composable
 fun MetricTile(metric: Metric, onClick: () -> Unit) {
-    val special = setOf("mold", "fan", "irrigation", "notes", "camera", "light")
+    // Removed "light" so it navigates (no inline switch)
+    val special = setOf("mold", "fan", "irrigation", "notes", "camera")
 
     // Special tiles (navigate)
     if (metric.key in special) {
-        var lightOn by remember { mutableStateOf(false) }
-
         Surface(
             onClick = onClick,
             modifier = Modifier
@@ -70,21 +69,11 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                         maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
-
-                if (metric.key == "light") {
-                    // Inline on/off control (doesn't navigate)
-                    Spacer(Modifier.width(8.dp))
-                    PillSwitch(
-                        checked = lightOn,
-                        onCheckedChange = { lightOn = it }
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
+                )
             }
         }
         return

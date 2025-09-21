@@ -9,12 +9,7 @@ import androidx.navigation.navArgument
 import com.keagan.smartroots.data.Prefs
 import com.keagan.smartroots.model.AppState
 import com.keagan.smartroots.screens.*
-/*
-Existing routes in your project:
-- ROUTE_SPLASH = "splash"
-- ROUTE_HOME   = "home/{mode}"
-- ROUTE_DETAIL = "detail/{metric}"
-*/
+
 const val ROUTE_SPLASH = "splash"
 const val ROUTE_HOME = "home/{mode}"
 const val ROUTE_DETAIL = "detail/{metric}"

@@ -81,9 +81,7 @@ fun HarvestScreen(onBack: () -> Unit) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
-                contentPadding = PaddingValues(
-                    top = 12.dp, bottom = 120.dp   // prevents FAB overlap on small phones
-                )
+                contentPadding = PaddingValues(top = 12.dp, bottom = 120.dp)
             ) {
                 if (active.isEmpty()) {
                     item {
@@ -100,7 +98,6 @@ fun HarvestScreen(onBack: () -> Unit) {
                             batch = b,
                             bg = tileBg,
                             fg = tileFg,
-                            onHarvest = { scope.launch { prefs.updateBatchStatus(b.id, "harvested") } },
                             onDelete = { scope.launch { prefs.removeBatch(b.id) } }
                         )
                     }
@@ -136,7 +133,6 @@ private fun HarvestCard(
     batch: HarvestBatch,
     bg: Color,
     fg: Color,
-    onHarvest: () -> Unit,
     onDelete: () -> Unit
 ) {
     val now = System.currentTimeMillis()
@@ -150,18 +146,33 @@ private fun HarvestCard(
         shape = MaterialTheme.shapes.extraLarge
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+            // Row: Crop name + Delete button
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(batch.crop, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = fg)
+                Text(
+                    text = batch.crop,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = fg
+                )
                 Spacer(Modifier.weight(1f))
-                Text("$left d left", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold, color = fg)
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Rounded.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
+                }
             }
-            LinearProgressIndicator(progress = { progress })
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Started $daysSince d ago • ${batch.daysToHarvest} d target", color = fg.copy(alpha = 0.85f))
-                Spacer(Modifier.weight(1f))
-                TextButton(onClick = onHarvest) { Text("Harvest", color = fg) }
-                IconButton(onClick = onDelete) { Icon(Icons.Rounded.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error) }
+
+            // Centered countdown
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Text(
+                    "$left d left",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = fg
+                )
             }
+
+            // Progress bar
+            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
         }
     }
 }
@@ -183,7 +194,6 @@ private fun AddBatchDialog(
                 if (crops.isEmpty()) {
                     Text("No crops in ${tent.uppercase()} planner.")
                 } else {
-                    // Simple cycle selector
                     TextButton(onClick = {
                         val idx = crops.indexOf(crop).takeIf { it >= 0 } ?: -1
                         crop = crops[((idx + 1) % crops.size).coerceAtLeast(0)]

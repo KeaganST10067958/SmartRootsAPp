@@ -78,6 +78,7 @@ fun DetailScreen(
         ) {
             when (metricKey) {
                 "fan" -> FanPanel()
+                "light" -> LightPanel()
                 "irrigation" -> IrrigationPanel()
                 "mold" -> MoldPanel()
                 "notes" -> NotesPanelFancy()
@@ -264,6 +265,31 @@ private fun FanPanel() {
         if (fanOn) "Fan is ON; airflow reduces mould risk."
         else "Turn fan ON after irrigation or when humidity is high.",
         "Aim airflow across the canopy, not directly at seedlings."
+    ))
+}
+
+@Composable
+private fun LightPanel() {
+    var lightOn by remember { mutableStateOf(false) }
+
+    ValueHeader(
+        icon = Icons.Rounded.LightMode,
+        label = "Light",
+        valueText = if (lightOn) "ON" else "OFF",
+        valueColor = if (lightOn) Color(0xFF66BB6A) else MaterialTheme.colorScheme.onSurfaceVariant,
+        gradient = srHeroGradient()
+    )
+
+    BigTile(title = "Grow Lights", subtitle = "This controls the tent lights") {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            PillSwitch(checked = lightOn, onCheckedChange = { lightOn = it })
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    TipsCard(lines = listOf(
+        "Use longer photoperiods for leafy veg; shorter for fodder mats.",
+        "If temperature rises too high, reduce light period or increase airflow."
     ))
 }
 
