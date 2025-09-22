@@ -1,19 +1,16 @@
 package com.keagan.smartroots.screens
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.material.icons.rounded.CameraAlt
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import android.content.Context
 import android.graphics.ImageDecoder
 import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Notes
@@ -38,12 +35,16 @@ import com.keagan.smartroots.components.PillSwitch
 import com.keagan.smartroots.data.Prefs
 import com.keagan.smartroots.model.Note
 import com.keagan.smartroots.ui.SRScaffold
+import com.keagan.smartroots.ui.theme.srCardSheen
 import com.keagan.smartroots.ui.theme.srHeroGradient
 import kotlinx.coroutines.launch
 import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.random.Random
-import androidx.compose.material.icons.rounded.CameraAlt
+import android.content.ContentValues
+import android.provider.MediaStore
+import androidx.compose.ui.window.Dialog
+
 
 
 private val DangerRed = Color(0xFFD32F2F)
@@ -77,8 +78,7 @@ fun DetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(pads)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()), // <— scrollable
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (metricKey) {
@@ -87,45 +87,10 @@ fun DetailScreen(
                 "mold" -> MoldPanel()
                 "notes" -> NotesPanelFancy()
                 "camera" -> CameraPanel(context)
+                "light" -> LightPanel() // NEW: grow light lives here with switch + tips
                 else -> SensorPanel(metricKey)
             }
         }
-    }
-}
-@Composable
-private fun CameraPanel(context: android.content.Context) {
-    val scanLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { /* TODO: feed to analyzer later */ }
-
-    ValueHeader(
-        icon = Icons.Rounded.CameraAlt,
-        label = "Camera",
-        valueText = "Open"
-    )
-
-    BigTile(title = "Capture") {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            // ✅ Original label
-            Button(onClick = { scanLauncher.launch(null) }) { Text("Plant scanner") }
-
-            // ✅ Original "Live" button with red recording dot
-            OutlinedButton(onClick = { /* open live feed */ }) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(Color(0xFFD32F2F), CircleShape)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Live")
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "Used to check plant health or disease.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }
 
@@ -145,14 +110,16 @@ private fun BigTile(
         shape = MaterialTheme.shapes.extraLarge,
         elevation = CardDefaults.elevatedCardElevation(3.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            if (!subtitle.isNullOrBlank()) {
-                Spacer(Modifier.height(2.dp))
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Box(Modifier.background(srCardSheen())) {
+            Column(Modifier.padding(16.dp)) {
+                Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (!subtitle.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Spacer(Modifier.height(8.dp))
+                content()
             }
-            Spacer(Modifier.height(8.dp))
-            content()
         }
     }
 }
@@ -189,10 +156,10 @@ private data class SensorSpec(
 private fun SensorPanel(metricKey: String) {
     val spec = when (metricKey) {
         "humidity" -> SensorSpec(Icons.Rounded.WaterDrop, "Humidity", "%", 40f, 90f, 55f..75f)
-        "temperature", "temp" -> SensorSpec(Icons.Rounded.Thermostat, "Temp", "°C", 16f, 34f, 20f..28f)
+        "temperature" -> SensorSpec(Icons.Rounded.Thermostat, "Temperature", "°C", 16f, 34f, 20f..28f)
         "ph" -> SensorSpec(Icons.Rounded.Science, "Soil pH", "pH", 5.2f, 7.2f, 5.8f..6.5f)
-        "ec", "em" -> SensorSpec(Icons.Rounded.Bolt, "EM", "mS/cm", 0.2f, 2.5f, 0.8f..2.0f)
-        "water" -> SensorSpec(Icons.Rounded.WaterDrop, "Water", "%", 20f, 100f, 40f..100f)
+        "ec" -> SensorSpec(Icons.Rounded.Bolt, "Electrical Conductivity", "mS/cm", 0.2f, 2.5f, 0.8f..2.0f)
+        "water" -> SensorSpec(Icons.Rounded.WaterDrop, "Water Level", "%", 20f, 100f, 40f..100f)
         else -> SensorSpec(Icons.Rounded.Info, metricKey, "", 0f, 1f, null)
     }
 
@@ -241,7 +208,7 @@ private fun SensorPanel(metricKey: String) {
         }
     }
 
-    if (metricKey == "humidity" || metricKey == "temperature" || metricKey == "temp") {
+    if (metricKey == "humidity" || metricKey == "temperature") {
         Spacer(Modifier.height(12.dp))
         var fanOn by remember { mutableStateOf(false) }
         BigTile(title = "Fan", subtitle = "This controls the tent fan") {
@@ -258,7 +225,7 @@ private fun SensorPanel(metricKey: String) {
             else "Humidity within ideal range.",
             "Keep gentle airflow across canopy; avoid pooling water."
         )
-        "temperature", "temp" -> listOf(
+        "temperature" -> listOf(
             if (statusText == "High") "Temp high: increase ventilation; consider shade/cooler intake."
             else if (statusText == "Low") "Temp low: reduce drafts; insulate base of tent/trays."
             else "Temperature within ideal range.",
@@ -269,9 +236,9 @@ private fun SensorPanel(metricKey: String) {
             "If pH > 6.5 (alkaline): add pH-Down; re-measure.",
             "Stable pH keeps nutrients available to roots."
         )
-        "ec", "em" -> listOf(
-            "Low EM: increase nutrient concentration gradually; avoid big jumps.",
-            "High EM: dilute reservoir with clean water, then re-check."
+        "ec" -> listOf(
+            "Low EC: increase nutrient concentration gradually; avoid big jumps.",
+            "High EC: dilute reservoir with clean water, then re-check."
         )
         else -> emptyList()
     }
@@ -393,6 +360,34 @@ private fun MoldPanel() {
     TipsCard(title = "Recommended adjustments", lines = recs)
 }
 
+/* ------------------------------ Light panel ---------------------------- */
+
+@Composable
+private fun LightPanel() {
+    var on by remember { mutableStateOf(false) }
+
+    ValueHeader(
+        icon = Icons.Rounded.LightMode,
+        label = "Grow Light",
+        valueText = if (on) "ON" else "OFF",
+        valueColor = if (on) SuccessLightGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+        gradient = srHeroGradient()
+    )
+
+    BigTile(title = "Light", subtitle = "This controls the grow light") {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            PillSwitch(checked = on, onCheckedChange = { on = it })
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    TipsCard(title = "Tips", lines = listOf(
+        "14–18h on for most leafy greens.",
+        "Raise light if leaf edges curl or bleach.",
+        "Shorten photoperiod to reduce heat stress."
+    ))
+}
+
 /* ------------------------------ Notes panel ---------------------------- */
 @Composable
 private fun NotesPanelFancy() {
@@ -400,45 +395,30 @@ private fun NotesPanelFancy() {
     val prefs = remember { Prefs(ctx) }
     val scope = rememberCoroutineScope()
     val notes by prefs.notes.collectAsState(initial = emptyList())
-    val snackbar = remember { SnackbarHostState() }
 
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
-    var images by remember { mutableStateOf<List<String>>(emptyList()) } // store strings (absolute path or content uri)
-    var openNote: Note? by remember { mutableStateOf(null) }
+    var images by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
-    fun showError(msg: String) {
-        scope.launch { snackbar.showSnackbar(msg) }
-    }
-
-    // Save preview bitmap to internal app storage (NO FileProvider needed)
-    fun addPreviewBitmap(bmp: android.graphics.Bitmap?) {
-        if (bmp == null) {
-            showError("Camera returned no image")
-            return
+    // --- Take a real photo to a MediaStore URI (so it persists & displays)
+    var pendingPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    val takePicture = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success && pendingPhotoUri != null) {
+            images = images + pendingPhotoUri!!
         }
-        runCatching {
-            val dir = java.io.File(ctx.filesDir, "notes")
-            if (!dir.exists()) dir.mkdirs()
-            val file = java.io.File(dir, "note_${System.currentTimeMillis()}.jpg")
-            file.outputStream().use { out ->
-                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
-            }
-            images = images + file.absolutePath
-        }.onFailure { showError("Couldn't save photo: ${it.message}") }
+        // reset
+        pendingPhotoUri = null
     }
 
-    val takePicturePreview = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.TakePicturePreview()
-    ) { bmp -> addPreviewBitmap(bmp) }
-
-    val pickImages = rememberLauncherForActivityResult(
+    // Pick from gallery (kept as-is)
+    val pickImage = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia()
-    ) { uris ->
-        if (!uris.isNullOrEmpty()) {
-            images = images + uris.map { it.toString() }
-        }
-    }
+    ) { uris -> images = uris ?: emptyList() }
+
+    // Viewer dialog
+    var openViewerFor by remember { mutableStateOf<Note?>(null) }
 
     ValueHeader(
         icon = Icons.AutoMirrored.Rounded.Notes,
@@ -449,40 +429,47 @@ private fun NotesPanelFancy() {
 
     BigTile(title = "Write a note") {
         OutlinedTextField(
-            value = title, onValueChange = { title = it },
-            modifier = Modifier.fillMaxWidth(), label = { Text("Title") }
+            value = title,
+            onValueChange = { title = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Title") }
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
-            value = body, onValueChange = { body = it },
+            value = body,
+            onValueChange = { body = it },
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 120.dp),
-            placeholder = { Text("Type here…") }, label = { Text("Body") }
+            placeholder = { Text("Type here…") },
+            label = { Text("Body") }
         )
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { takePicturePreview.launch(null) }) { Text("Take picture") }
-            OutlinedButton(
-                onClick = {
-                    pickImages.launch(
-                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                    )
-                }
-            ) { Text("Add picture") }
+            Button(onClick = {
+                // Create a destination and launch camera
+                pendingPhotoUri = createImageUri(ctx)
+                pendingPhotoUri?.let { takePicture.launch(it) }
+            }) { Text("Take picture") }
+
+            OutlinedButton(onClick = {
+                pickImage.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) { Text("Add picture") }
         }
+
         Spacer(Modifier.height(12.dp))
+
         Button(
             onClick = {
                 scope.launch {
-                    runCatching {
-                        prefs.addNote(
-                            title.trim(),
-                            body.trim(),
-                            images  // strings (paths or content uris)
-                        )
-                    }.onFailure { showError("Couldn't save note: ${it.message}") }
-                    title = ""; body = ""; images = emptyList()
+                    prefs.addNote(
+                        title.trim(),
+                        body.trim(),
+                        images.map { it.toString() }
+                    )
+                    title = ""
+                    body = ""
+                    images = emptyList()
                 }
             },
             modifier = Modifier.align(Alignment.End)
@@ -498,18 +485,14 @@ private fun NotesPanelFancy() {
             fontWeight = FontWeight.SemiBold
         )
         Spacer(Modifier.height(8.dp))
-
-        // IMPORTANT: Use a plain Column (no LazyColumn here, since the parent already scrolls)
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            notes
-                .sortedByDescending { it.createdAt }
-                .forEach { note ->
-                    NoteItem(
-                        note = note,
-                        onDelete = { id -> scope.launch { prefs.deleteNote(id) } },
-                        onClick = { openNote = note }
-                    )
-                }
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(notes.sortedByDescending { it.createdAt }) { note ->
+                NoteItem(
+                    note = note,
+                    onClick = { openViewerFor = note },
+                    onDelete = { id -> scope.launch { prefs.deleteNote(id) } }
+                )
+            }
         }
     } else {
         TipsCard(
@@ -520,60 +503,21 @@ private fun NotesPanelFancy() {
         )
     }
 
-    if (openNote != null) {
-        val n = openNote!!
-        AlertDialog(
-            onDismissRequest = { openNote = null },
-            confirmButton = { TextButton(onClick = { openNote = null }) { Text("Close") } },
-            title = { Text(n.title.ifBlank { "Untitled" }) },
-            text = {
-                val scroll = rememberScrollState()
-                Column(
-                    modifier = Modifier
-                        .heightIn(max = 420.dp)            // cap content
-                        .verticalScroll(scroll),            // make scrollable
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    // Show ALL images (if you only want the first, keep just the first block)
-                    n.imageUris.forEach { uriString ->
-                        if (!uriString.isNullOrBlank()) {
-                            val model: Any =
-                                if (uriString.startsWith("/")) java.io.File(uriString) else uriString
-                            AsyncImage(
-                                model = model,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .heightIn(min = 120.dp, max = 220.dp),   // keep reasonable
-                            )
-                        }
-                    }
-
-                    if (n.body.isNotBlank()) {
-                        Text(n.body)
-                    } else {
-                        Text("—", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-
-                    // Optional timestamp line (uncomment if you want it)
-                    // val date = java.text.DateFormat.getDateTimeInstance().format(java.util.Date(n.createdAt))
-                    // Text("Saved: $date", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-        )
+    // Viewer dialog
+    openViewerFor?.let { n ->
+        NoteViewerDialog(note = n, onDismiss = { openViewerFor = null })
     }
 }
 
-    @Composable
+@Composable
 private fun NoteItem(
     note: Note,
-    onDelete: (String) -> Unit,
-    onClick: (Note) -> Unit
+    onClick: () -> Unit,
+    onDelete: (String) -> Unit
 ) {
     ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick(note) },
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.elevatedCardColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
         ),
@@ -582,10 +526,9 @@ private fun NoteItem(
     ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             val thumb = note.imageUris.firstOrNull()
-            if (!thumb.isNullOrBlank()) {
-                val model: Any = if (thumb.startsWith("/")) java.io.File(thumb) else thumb
+            if (thumb != null) {
                 AsyncImage(
-                    model = model,
+                    model = thumb,
                     contentDescription = null,
                     modifier = Modifier
                         .size(56.dp)
@@ -599,13 +542,117 @@ private fun NoteItem(
                     if (note.body.isBlank()) "—" else note.body.lines().first(),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
             IconButton(onClick = { onDelete(note.id) }) {
                 Icon(Icons.Rounded.Delete, contentDescription = "Delete")
             }
         }
+    }
+}
+
+@Composable
+private fun NoteViewerDialog(note: Note, onDismiss: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(shape = MaterialTheme.shapes.extraLarge, tonalElevation = 3.dp) {
+            Column(
+                Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    note.title.ifBlank { "Untitled" },
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                if (note.body.isNotBlank()) {
+                    Text(note.body, style = MaterialTheme.typography.bodyMedium)
+                }
+                val images = note.imageUris
+                if (images.isNotEmpty()) {
+                    // show first big
+                    AsyncImage(
+                        model = images.first(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 180.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                    )
+                    // small strip
+                    if (images.size > 1) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            images.drop(1).forEach { uri ->
+                                AsyncImage(
+                                    model = uri,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(64.dp)
+                                        .background(
+                                            MaterialTheme.colorScheme.surfaceVariant,
+                                            MaterialTheme.shapes.small
+                                        )
+                                )
+                            }
+                        }
+                    }
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("Close") }
+                }
+            }
+        }
+    }
+}
+
+/** Create a real MediaStore image URI for the camera to write into. */
+private fun createImageUri(context: Context): Uri? {
+    val name = "note_${System.currentTimeMillis()}.jpg"
+    val values = ContentValues().apply {
+        put(MediaStore.Images.Media.DISPLAY_NAME, name)
+        put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+        // Saved to Pictures/SmartRoots (API 29+) – no storage permission required.
+        put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SmartRoots")
+        put(MediaStore.Images.Media.IS_PENDING, 0)
+    }
+    return context.contentResolver.insert(
+        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+        values
+    )
+}
+
+@Composable
+private fun CameraPanel(context: Context) {
+    val scanLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { /* could feed to analyzer later */ }
+
+    ValueHeader(
+        icon = Icons.Rounded.CameraAlt,
+        label = "Camera",
+        valueText = "Open"
+    )
+
+    BigTile(title = "Capture") {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = { scanLauncher.launch(null) }) { Text("Plant scanner") }
+            OutlinedButton(onClick = { /* open live feed */ }) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .background(Color(0xFFD32F2F), CircleShape)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Live")
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(
+            "Used to check plant health or disease.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

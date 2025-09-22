@@ -32,26 +32,35 @@ fun HomeScreen(
     val common = listOf(
         Metric("humidity", R.string.humidity, R.string.tip_humidity, "%", 40f, 90f, 55f..75f, Icons.Rounded.WaterDrop),
 
-        // Short labels only on dashboard
-        Metric("temperature", R.string.temp_short, R.string.tip_temperature, "°C", 16f, 34f, 20f..28f, Icons.Rounded.Thermostat),
-        Metric("ec", R.string.em_short, R.string.tip_ec, "mS/cm", 0.2f, 2.5f, 0.4f..1.5f, Icons.Rounded.Bolt),
+        // Uses updated string "Temp"
+        Metric("temperature", R.string.temperature, R.string.tip_temperature, "°C", 16f, 34f, 20f..28f, Icons.Rounded.Thermostat),
+
+        Metric("ph", R.string.soil_ph, R.string.tip_ph, "pH", 5.2f, 7.2f, 5.8f..6.5f, Icons.Rounded.Science),
+
+        // Uses updated string "EC"
+        Metric("ec", R.string.ec, R.string.tip_ec, "mS/cm", 0.2f, 2.5f, 0.4f..1.5f, Icons.Rounded.Bolt),
 
         Metric("water", R.string.water_level, R.string.tip_water, "%", 20f, 100f, 40f..100f, Icons.Rounded.WaterDrop),
         Metric("notes", R.string.notes, R.string.tip_notes, "", 0f, 0f, null, Icons.AutoMirrored.Rounded.Notes),
         Metric("camera", R.string.camera, R.string.tip_camera, "", 0f, 0f, null, Icons.Rounded.CameraAlt),
+
+        // Chat / Voice assistants (if you added them)
+        Metric("chat_fred", R.string.chat_fred, R.string.tip_chat_fred, "", 0f, 0f, null, Icons.Rounded.Chat),
+        Metric("talk_fred", R.string.talk_fred, R.string.tip_talk_fred, "", 0f, 0f, null, Icons.Rounded.Mic),
     )
 
     val fodderExtras = listOf(
         Metric("mold", R.string.mold_watch, R.string.tip_mold, "", 0f, 0f, null, Icons.Rounded.Warning),
         Metric("fan", R.string.fan, R.string.tip_fan, "", 0f, 0f, null, Icons.Rounded.Air),
         Metric("irrigation", R.string.irrigation, R.string.tip_irrigation, "", 0f, 0f, null, Icons.Rounded.WaterDrop),
-        Metric("light", R.string.light, R.string.tip_light, "", 0f, 0f, null, Icons.Rounded.LightMode)
+        // NOTE: use grow_light to avoid duplicate key with theme "light"
+        Metric("light", R.string.grow_light, R.string.tip_light, "", 0f, 0f, null, Icons.Rounded.LightMode)
     )
 
     val vegExtras = listOf(
         Metric("fan", R.string.fan, R.string.tip_fan, "", 0f, 0f, null, Icons.Rounded.Air),
         Metric("irrigation", R.string.irrigation, R.string.tip_irrigation, "", 0f, 0f, null, Icons.Rounded.WaterDrop),
-        Metric("light", R.string.light, R.string.tip_light, "", 0f, 0f, null, Icons.Rounded.LightMode)
+        Metric("light", R.string.grow_light, R.string.tip_light, "", 0f, 0f, null, Icons.Rounded.LightMode)
     )
 
     val metrics = (common + if (isVeg) vegExtras else fodderExtras).distinctBy { it.key }

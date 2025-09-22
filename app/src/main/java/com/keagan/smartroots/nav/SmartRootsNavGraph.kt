@@ -13,10 +13,13 @@ import com.keagan.smartroots.screens.*
 const val ROUTE_SPLASH = "splash"
 const val ROUTE_HOME = "home/{mode}"
 const val ROUTE_DETAIL = "detail/{metric}"
-
-// NEW:
 const val ROUTE_PLANNER = "planner/{tent}"   // "fodder" | "veg"
 const val ROUTE_HARVEST = "harvest"
+
+// ✅ NEW routes
+const val ROUTE_FACE_SCAN = "facescan?next={next}"
+const val ROUTE_CHAT_FRED = "chatfred"
+const val ROUTE_TALK_FRED = "talkfred"
 
 @Composable
 fun SmartRootsNavGraph(
@@ -35,8 +38,10 @@ fun SmartRootsNavGraph(
                         "planner_veg" -> nav.navigate("planner/veg")
                         "harvest" -> nav.navigate(ROUTE_HARVEST)
                         else -> {
-                            nav.navigate("home/$mode") {
-                                popUpTo(ROUTE_SPLASH) { inclusive = true }
+                            // go to FaceScan first, then continue to the intended home
+                            val next = "home/$mode"
+                            nav.navigate("facescan?next=$next") {
+                                popUpTo(ROUTE_SPLASH) { inclusive = false }
                             }
                         }
                     }
@@ -57,7 +62,13 @@ fun SmartRootsNavGraph(
                         popUpTo(ROUTE_HOME) { inclusive = true }
                     }
                 },
-                onOpenMetric = { key -> nav.navigate("detail/$key") }
+                onOpenMetric = { key ->
+                    when (key) {
+                        "chat_fred" -> nav.navigate(ROUTE_CHAT_FRED)
+                        "talk_fred" -> nav.navigate(ROUTE_TALK_FRED)
+                        else -> nav.navigate("detail/$key")
+                    }
+                }
             )
         }
 
@@ -69,7 +80,6 @@ fun SmartRootsNavGraph(
             DetailScreen(metricKey = metric, onBack = { nav.popBackStack() })
         }
 
-        // NEW Planner
         composable(
             route = ROUTE_PLANNER,
             arguments = listOf(navArgument("tent") { type = NavType.StringType })
@@ -78,9 +88,31 @@ fun SmartRootsNavGraph(
             PlannerScreen(tent = tent, onBack = { nav.popBackStack() })
         }
 
-        // NEW Harvest
         composable(ROUTE_HARVEST) {
             HarvestScreen(onBack = { nav.popBackStack() })
+        }
+
+        // ✅ NEW: Face scan mock
+        composable(
+            route = "facescan?next={next}",
+            arguments = listOf(navArgument("next") { type = NavType.StringType; defaultValue = "home/veg" })
+        ) { backStackEntry ->
+            val next = backStackEntry.arguments?.getString("next") ?: "home/veg"
+            FaceScanScreen(nextRoute = next) { go ->
+                nav.navigate(go) {
+                    popUpTo(ROUTE_SPLASH) { inclusive = true }
+                }
+            }
+        }
+
+        // ✅ NEW: Chat with Fred
+        composable(ROUTE_CHAT_FRED) {
+            ChatFredScreen(onBack = { nav.popBackStack() })
+        }
+
+        // ✅ NEW: Talk with Fred (voice prompt)
+        composable(ROUTE_TALK_FRED) {
+            TalkFredScreen(onBack = { nav.popBackStack() })
         }
     }
 }

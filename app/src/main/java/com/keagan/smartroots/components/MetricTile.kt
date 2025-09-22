@@ -23,6 +23,7 @@ private val DangerRed         = Color(0xFFD32F2F)
 private val WarningOrange     = Color(0xFFFFA000)
 private val SuccessLightGreen = Color(0xFF66BB6A)
 
+/** Status → color mapping used by tiles */
 private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (status) {
     "High"  -> DangerRed
     "Low"   -> WarningOrange
@@ -32,14 +33,13 @@ private fun colorForStatus(status: String, scheme: ColorScheme): Color = when (s
 
 @Composable
 fun MetricTile(metric: Metric, onClick: () -> Unit) {
-    val special = setOf("mold", "fan", "irrigation", "notes", "camera", "light")
+    // Tiles that simply navigate to a detail page (no inline controls)
+    // NOTE: "light" is included here so it navigates; the switch now lives inside the detail page.
+    val special = setOf("mold", "fan", "irrigation", "notes", "camera", "light", "chat_fred", "talk_fred")
 
-    // —— Special tiles (navigate), except "light" which contains an inline switch and does NOT navigate
     if (metric.key in special) {
-        var lightOn by remember { mutableStateOf(false) }
-
         Surface(
-            onClick = if (metric.key == "light") ({}) else onClick, // no navigation for light
+            onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = 140.dp),
@@ -67,29 +67,23 @@ fun MetricTile(metric: Metric, onClick: () -> Unit) {
                         text = stringResource(metric.tipRes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(0.7f),
-                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                if (metric.key == "light") {
-                    Spacer(Modifier.width(8.dp))
-                    PillSwitch(
-                        checked = lightOn,
-                        onCheckedChange = { lightOn = it }
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Rounded.ChevronRight,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
-                    )
-                }
+                // Always show chevron for navigator tiles (no inline switch here anymore)
+                Icon(
+                    imageVector = Icons.Rounded.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurface.copy(0.4f)
+                )
             }
         }
         return
     }
 
-    // —— Common sensor tiles (with simulated readings)
+    // ----- Common tiles with simulated reading -----
     var reading by remember { mutableStateOf<Float?>(null) }
     LaunchedEffect(metric.key) {
         while (true) {
