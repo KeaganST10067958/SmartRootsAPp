@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Wrap your existing logo and shrink it via insets -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/ic_logo"
+        android:left="32dp"
+        android:right="32dp"
+        android:top="32dp"
+        android:bottom="32dp"/>
+</layer-list>
+
