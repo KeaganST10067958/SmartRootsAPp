@@ -3,11 +3,8 @@ package com.keagan.smartroots.screens
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +17,11 @@ import androidx.compose.ui.unit.dp
 import com.keagan.smartroots.R
 import com.keagan.smartroots.data.Prefs
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
+
+
 
 @Composable
 private fun scrimForTheme(): Pair<Color, Color> {
@@ -73,10 +75,14 @@ fun SplashScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp),
+                .padding(horizontal = 20.dp)
+                .verticalScroll(rememberScrollState())   // ← add this
+                .imePadding()
+                .navigationBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
-        ) {
+        )
+        {
             AnimatedVisibility(visible = logoVisible, enter = fadeIn(animationSpec = tween(700))) {
                 Icon(
                     painter = painterResource(id = R.drawable.ic_logo),
